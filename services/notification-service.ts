@@ -1,6 +1,7 @@
 import twilio from "twilio";
 import { type Order } from "../shared/schema";
 import { MessageQueue } from "./message-queue";
+import { config } from "../config";
 
 interface OrderNotificationData {
   orderNumber: string;
@@ -57,8 +58,8 @@ export class NotificationService {
     console.log('[NOTIFICATION] Initializing notification service...');
     
     // Check if Twilio credentials are properly configured
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const accountSid = config.twilio.accountSid;
+    const authToken = config.twilio.authToken;
 
     if (!accountSid || !authToken || !accountSid.startsWith('AC')) {
       console.error('[NOTIFICATION] Twilio credentials missing or invalid:', {
@@ -77,9 +78,9 @@ export class NotificationService {
       this.twilioClient = twilio(accountSid, authToken);
       
       // Twilio WhatsApp Business number configuration
-      const rawWhatsAppNumber = process.env.TWILIO_WHATSAPP_FROM;
+      const rawWhatsAppNumber = config.twilio.whatsapp.fromNumber;
       if (!rawWhatsAppNumber) {
-        console.error('[WHATSAPP] No WhatsApp number configured in TWILIO_WHATSAPP_FROM');
+        console.error('[WHATSAPP] No WhatsApp number configured in config');
         throw new Error('WhatsApp number not configured');
       }
 
@@ -95,7 +96,7 @@ export class NotificationService {
       console.log('[NOTIFICATION] Initialized WhatsApp with number:', this.whatsappFromNumber);
       
       // Twilio SMS number - ensure it's properly formatted with country code
-      const rawSmsNumber = process.env.TWILIO_SMS_FROM || process.env.TWILIO_PHONE_NUMBER || '';
+      const rawSmsNumber = config.twilio.sms.fromNumber || config.twilio.sms.phoneNumber || '';
       this.smsFromNumber = rawSmsNumber.startsWith('+') ? rawSmsNumber : (rawSmsNumber ? `+${rawSmsNumber}` : '');
     } catch (error) {
       console.error('[NOTIFICATION] Failed to initialize Twilio client:', error);
@@ -420,7 +421,7 @@ export class NotificationService {
         const error = {
           hasClient: !!this.twilioClient,
           whatsappNumber: this.whatsappFromNumber,
-          accountSid: process.env.TWILIO_ACCOUNT_SID?.substring(0, 8) + '...',
+          accountSid: config.twilio.accountSid?.substring(0, 8) + '...',
           error: 'WhatsApp configuration incomplete'
         };
         console.error(`[WHATSAPP] Configuration Error:`, error);

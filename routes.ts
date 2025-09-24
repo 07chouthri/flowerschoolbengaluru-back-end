@@ -14,10 +14,12 @@ const sessions: Map<string, { userId: string; expires: number }> = new Map();
 // Simple in-memory OTP storage
 const otpStorage: Map<string, { otp: string; expires: number; verified: boolean }> = new Map();
 
+import { config } from './config';
+
 // Initialize Twilio client for Verify service
 const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
+  config.twilio.accountSid,
+  config.twilio.authToken
 );
 
 // Helper function to generate OTP
@@ -30,9 +32,9 @@ const sendVerificationCode = async (phone: string) => {
   try {
     console.log(`[VERIFY DEBUG] Attempting to send verification code:`);
     console.log(`[VERIFY DEBUG] TO: ${phone}`);
-    console.log(`[VERIFY DEBUG] Service SID: ${process.env.TWILIO_VERIFY_SERVICE_SID}`);
+    console.log(`[VERIFY DEBUG] Service SID: ${config.twilio.verifyServiceSid}`);
 
-    const verification = await twilioClient.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+    const verification = await twilioClient.verify.v2.services(config.twilio.verifyServiceSid)
       .verifications
       .create({
         to: phone,
@@ -53,7 +55,7 @@ const verifyCode = async (phone: string, code: string) => {
     console.log(`[VERIFY DEBUG] Attempting to verify code:`);
     console.log(`[VERIFY DEBUG] Phone: ${phone}, Code: ${code}`);
 
-    const verificationCheck = await twilioClient.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID!)
+    const verificationCheck = await twilioClient.verify.v2.services(config.twilio.verifyServiceSid)
       .verificationChecks
       .create({
         to: phone,
@@ -1153,7 +1155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             studentEmail: enrollmentData.email,
             courseTitle: course.title,
             batch: enrollmentData.batch || 'Next Available Batch',
-            adminPhone: process.env.ADMIN_PHONE || '+919042358932',
+            adminPhone: config.admin.phone,
             questions: enrollmentData.questions
           });
 
@@ -1509,8 +1511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Admin authorization - check if user email is in admin list or has admin role
-      const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(email => email.trim());
-      const isAdmin = adminEmails.includes(user.email) || user.userType === "admin";
+      const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
 
       if (!isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
@@ -1541,8 +1542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Admin authorization - check if user email is in admin list or has admin role
-      const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(email => email.trim());
-      const isAdmin = adminEmails.includes(user.email) || user.userType === "admin";
+      const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
 
       if (!isAdmin) {
         return res.status(403).json({ message: "Admin access required" });
@@ -1934,7 +1934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eventTitle: matchingEvent.title,
             eventDate: matchingEvent.event_date,
             eventTime: matchingEvent.event_time,
-            adminPhone: process.env.ADMIN_PHONE || '+919042358932'
+            adminPhone: config.admin.phone
           });
 
           console.log("[EVENT ENROLLMENT] Notification result:", {

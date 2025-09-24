@@ -2,6 +2,7 @@ import { storage } from "../storage";
 import { notificationService } from "./notification-service";
 import { getSMSStatusUpdateTemplate } from "../templates/sms-templates";
 import { getWhatsAppStatusUpdateTemplate } from "../templates/whatsapp-templates";
+import { config } from "../config";
 
 export interface OrderStatusProgression {
   currentStatus: string;
@@ -93,7 +94,7 @@ export class BackgroundScheduler {
               const updatedOrder = await storage.advanceOrderStatus(order.id, progression.nextStatus);
               
               // Send status update notification if Twilio is configured
-              if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && order.phone) {
+              if (config.twilio.accountSid && config.twilio.authToken && order.phone) {
                 await this.sendStatusUpdateNotification(updatedOrder, progression.nextStatus);
               }
               

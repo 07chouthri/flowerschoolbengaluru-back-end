@@ -1,7 +1,7 @@
-import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
+import { config } from './config';
 import { setupVite, serveStatic, log } from "./vite";
 import { backgroundScheduler } from "./services/background-scheduler";
 import cors from "cors";
@@ -11,7 +11,7 @@ const app = express();
 // Configure CORS
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:8080"], 
+    origin: config.server.cors.origins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -53,7 +53,7 @@ app.use((req, res, next) => {
 });
 
 const startServer = async (server: any, retries = 3) => {
-  const basePort = parseInt(process.env.PORT || "5000", 10);
+  const basePort = config.server.port;
   
   for (let i = 0; i < retries; i++) {
     const port = basePort + i;

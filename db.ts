@@ -1,17 +1,12 @@
-import dotenv from "dotenv";
-dotenv.config();
-
 import { Pool } from "pg";
+import { config } from './config';
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  "postgres://postgres:postgres@localhost:5432/ecommerce";
-if (!DATABASE_URL) {
+if (!config.database.url) {
   throw new Error(
-    "DATABASE_URL must be set. Example: postgres://user:password@localhost:5432/mydb"
+    "Database URL must be configured in config.ts"
   );
 }
 
 export const db = new Pool({
-  connectionString: DATABASE_URL,
+  connectionString: config.database.url
 });
