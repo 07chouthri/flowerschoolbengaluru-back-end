@@ -8,6 +8,7 @@ import cors from "cors";
 
 const app = express();
 
+// Configure CORS
 app.use(
   cors({
     origin: config.server.cors.origins,
@@ -51,9 +52,9 @@ app.use((req, res, next) => {
   next();
 });
 
-const startServer = async (server: any, retries = 3): Promise<number> => {
+const startServer = async (server: any, retries = 3) => {
   const basePort = config.server.port;
-
+  
   for (let i = 0; i < retries; i++) {
     const port = basePort + i;
     try {
@@ -61,7 +62,7 @@ const startServer = async (server: any, retries = 3): Promise<number> => {
         server.listen(
           {
             port,
-            host: "0.0.0.0",
+            host: "localhost",
           },
           () => {
             log(serving on port ${port});
@@ -75,7 +76,7 @@ const startServer = async (server: any, retries = 3): Promise<number> => {
           reject(err);
         });
       });
-      return port;
+      return port; // Successfully started server
     } catch (err) {
       if (i === retries - 1) {
         throw err;
@@ -104,7 +105,8 @@ const startServer = async (server: any, retries = 3): Promise<number> => {
     }
 
     const port = await startServer(server);
-
+    
+    // Start background scheduler for order status progression
     try {
       backgroundScheduler.start();
       log("Background scheduler started for order status progression");
