@@ -11,6 +11,10 @@
       "@shared/": ["./shared/"]
     }
   },
-  "include": ["/*.ts"],
+  "include": [
+    "index.ts",
+    "routes.ts",
+    "/*.ts"
+  ],
   "exclude": ["node_modules"]
 }
