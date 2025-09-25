@@ -36,7 +36,7 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      let logLine = ${req.method} ${path} ${res.statusCode} in ${duration}ms;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -52,9 +52,9 @@ app.use((req, res, next) => {
   next();
 });
 
-const startServer = async (server: any, retries = 3) => {
+const startServer = async (server: any, retries = 3): Promise<number> => {
   const basePort = config.server.port;
-  
+
   for (let i = 0; i < retries; i++) {
     const port = basePort + i;
     try {
@@ -62,15 +62,15 @@ const startServer = async (server: any, retries = 3) => {
         server.listen(
           {
             port,
-            host: "localhost",
+            host: "0.0.0.0",  // Listen on all network interfaces
           },
           () => {
-            log(`serving on port ${port}`);
+            log(serving on port ${port});
             resolve(undefined);
           }
         ).on('error', (err: NodeJS.ErrnoException) => {
           if (err.code === 'EADDRINUSE' && i < retries - 1) {
-            log(`Port ${port} is in use, trying ${port + 1}`);
+            log(Port ${port} is in use, trying ${port + 1});
             return;
           }
           reject(err);
@@ -105,7 +105,7 @@ const startServer = async (server: any, retries = 3) => {
     }
 
     const port = await startServer(server);
-    
+
     // Start background scheduler for order status progression
     try {
       backgroundScheduler.start();
@@ -116,5 +116,5 @@ const startServer = async (server: any, retries = 3) => {
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
-  }
+  }
 })();
