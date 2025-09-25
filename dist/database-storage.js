@@ -843,6 +843,19 @@ export class DatabaseStorage {
         const errors = [];
         const validatedItems = [];
         for (const item of items) {
+            // Validate required fields
+            if (!item.productId) {
+                errors.push(`Product ID is required`);
+                continue;
+            }
+            if (!item.quantity || item.quantity <= 0) {
+                errors.push(`Valid quantity is required`);
+                continue;
+            }
+            if (!item.unitPrice || item.unitPrice <= 0) {
+                errors.push(`Valid unit price is required`);
+                continue;
+            }
             const query = `
         SELECT * FROM bouquetbar.products
         WHERE id = '${item.productId}'
@@ -865,10 +878,6 @@ export class DatabaseStorage {
             const currentPrice = parseFloat(product.price);
             if (Math.abs(currentPrice - item.unitPrice) > 0.01) {
                 errors.push(`Price mismatch for ${product.name}. Current: ${currentPrice}, Provided: ${item.unitPrice}`);
-                continue;
-            }
-            if (item.quantity <= 0) {
-                errors.push(`Invalid quantity for ${product.name}`);
                 continue;
             }
             validatedItems.push({

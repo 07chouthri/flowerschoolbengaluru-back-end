@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
+// Dynamic import for Vite to avoid conflicts
 // Define base vite config here instead of importing
 const viteConfig = {
     plugins: [],
@@ -43,8 +44,8 @@ export async function setupVite(app, server) {
         hmr: { server },
         allowedHosts: true,
     };
-    const { createServer } = await import('node_modules/vite/dist/node/index.js');
-    const vite = await createServer({
+    const { createServer } = await import('vite/dist/node/index.js');
+    const viteServer = await createServer({
         ...viteConfig,
         configFile: false,
         customLogger: {
@@ -63,7 +64,7 @@ export async function setupVite(app, server) {
         if (req.path.startsWith('/api/')) {
             return next();
         }
-        vite.middlewares(req, res, next);
+        viteServer.middlewares(req, res, next);
     });
     // Handle non-API routes
     app.use("*", async (req, res, next) => {
@@ -83,7 +84,7 @@ export async function setupVite(app, server) {
             let template = await fs.promises.readFile(clientTemplate, "utf-8");
             template = template.replace(`src="/src/main.tsx"`, `src="/src/main.tsx?v=${nanoid()}"`);
             try {
-                const page = await vite.transformIndexHtml(url, template);
+                const page = await viteServer.transformIndexHtml(url, template);
                 res.status(200).set({ "Content-Type": "text/html" }).end(page);
             }
             catch (transformError) {

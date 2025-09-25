@@ -969,7 +969,7 @@ export class DatabaseStorage implements IStorage {
 
   //PROCESS TO CHECK THE ALL DATA - Removed duplicate method
 
-  async validateCartItems(items: Array<{ productId: string; quantity: number; unitPrice: number }>): Promise<{
+  async validateCartItems(items: Array<{ productId?: string; quantity?: number; unitPrice?: number; productName?: string; totalPrice?: number }>): Promise<{
     isValid: boolean;
     errors?: string[];
     validatedItems?: Array<{ productId: string; productName: string; quantity: number; unitPrice: number; totalPrice: number }>;
@@ -977,6 +977,22 @@ export class DatabaseStorage implements IStorage {
     const errors: string[] = [];
     const validatedItems: Array<{ productId: string; productName: string; quantity: number; unitPrice: number; totalPrice: number }> = [];
     for (const item of items) {
+      // Validate required fields
+      if (!item.productId) {
+        errors.push(`Product ID is required`);
+        continue;
+      }
+      
+      if (!item.quantity || item.quantity <= 0) {
+        errors.push(`Valid quantity is required`);
+        continue;
+      }
+      
+      if (!item.unitPrice || item.unitPrice <= 0) {
+        errors.push(`Valid unit price is required`);
+        continue;
+      }
+
       const query = `
         SELECT * FROM bouquetbar.products
         WHERE id = '${item.productId}'
@@ -1003,11 +1019,6 @@ export class DatabaseStorage implements IStorage {
       const currentPrice = parseFloat(product.price);
       if (Math.abs(currentPrice - item.unitPrice) > 0.01) {
         errors.push(`Price mismatch for ${product.name}. Current: ${currentPrice}, Provided: ${item.unitPrice}`);
-        continue;
-      }
-
-      if (item.quantity <= 0) {
-        errors.push(`Invalid quantity for ${product.name}`);
         continue;
       }
 
@@ -1590,7 +1601,7 @@ export class DatabaseStorage implements IStorage {
         NOW(),
         ${validUserId ? `'${validUserId}'` : "NULL"},
         '${validatedOrder.deliveryAddress || ""}',
-        ${validatedOrder.deliveryDate ? `'${validatedOrder.deliveryDate.toISOString()}'` : "NULL"},
+        ${validatedOrder.deliveryDate ? `'${(validatedOrder.deliveryDate as Date).toISOString()}'` : "NULL"},
         ${validatedOrder.subtotal},
         ${validatedOrder.deliveryCharge || 0},
         '${couponCode || ""}',
@@ -1601,7 +1612,7 @@ export class DatabaseStorage implements IStorage {
         ${validatedOrder.paymentCharges || 0},
         'pending',
         '${validatedOrder.paymentTransactionId || ""}',
-        ${validatedOrder.estimatedDeliveryDate ? `'${validatedOrder.estimatedDeliveryDate.toISOString()}'` : "NULL"},
+        ${validatedOrder.estimatedDeliveryDate ? `'${(validatedOrder.estimatedDeliveryDate as Date).toISOString()}'` : "NULL"},
         NOW(),
         NOW(),
         ${validatedOrder.pointsAwarded ? "true" : "false"}

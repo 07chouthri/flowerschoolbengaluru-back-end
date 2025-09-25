@@ -1,19 +1,19 @@
 import { randomUUID } from "crypto";
 import { DatabaseStorage } from "./database-storage.js";
 export class MemStorage {
-    users = new Map();
-    products = new Map();
-    courses = new Map();
-    orders = new Map();
-    enrollments = new Map();
-    testimonials = new Map();
-    blogPosts = new Map();
-    coupons = new Map();
-    addresses = new Map();
-    deliveryOptions = new Map();
-    carts = new Map();
-    favorites = new Map();
     constructor() {
+        this.users = new Map();
+        this.products = new Map();
+        this.courses = new Map();
+        this.orders = new Map();
+        this.enrollments = new Map();
+        this.testimonials = new Map();
+        this.blogPosts = new Map();
+        this.coupons = new Map();
+        this.addresses = new Map();
+        this.deliveryOptions = new Map();
+        this.carts = new Map();
+        this.favorites = new Map();
         this.initializeData();
     }
     initializeData() {
@@ -337,21 +337,23 @@ export class MemStorage {
     }
     async createUser(insertUser) {
         const id = randomUUID();
+        const now = new Date();
         const user = {
-            ...insertUser,
             id,
-            firstName: insertUser.firstName ?? null,
-            lastName: insertUser.lastName ?? null,
-            phone: insertUser.phone ?? null,
-            userType: null,
-            profileImageUrl: null,
-            defaultAddress: null,
-            deliveryAddress: null,
-            country: null,
-            state: null,
+            email: insertUser.email,
+            password: insertUser.password,
+            firstName: insertUser.firstName ?? "",
+            lastName: insertUser.lastName ?? "",
+            phone: insertUser.phone ?? "",
+            userType: "",
+            profileImageUrl: "",
+            defaultAddress: "",
+            deliveryAddress: "",
+            country: "",
+            state: "",
             points: 0,
-            createdAt: null,
-            updatedAt: null
+            createdAt: now,
+            updatedAt: now
         };
         this.users.set(id, user);
         return user;
@@ -373,12 +375,16 @@ export class MemStorage {
     async createProduct(insertProduct) {
         const id = randomUUID();
         const product = {
-            ...insertProduct,
             id,
-            createdAt: new Date(),
-            inStock: insertProduct.inStock ?? null,
-            featured: insertProduct.featured ?? null,
-            stockQuantity: insertProduct.stockQuantity ?? 0
+            name: insertProduct.name,
+            description: insertProduct.description,
+            price: insertProduct.price,
+            category: insertProduct.category,
+            image: insertProduct.image,
+            stockQuantity: insertProduct.stockQuantity ?? 0,
+            inStock: insertProduct.inStock ?? true,
+            featured: insertProduct.featured ?? false,
+            createdAt: new Date()
         };
         this.products.set(id, product);
         return product;
@@ -464,11 +470,16 @@ export class MemStorage {
     async createCourse(insertCourse) {
         const id = randomUUID();
         const course = {
-            ...insertCourse,
             id,
-            createdAt: new Date(),
-            popular: insertCourse.popular ?? null,
-            nextBatch: insertCourse.nextBatch ?? null
+            title: insertCourse.title,
+            description: insertCourse.description,
+            price: insertCourse.price,
+            duration: insertCourse.duration,
+            sessions: insertCourse.sessions,
+            features: insertCourse.features,
+            popular: insertCourse.popular ?? false,
+            nextBatch: insertCourse.nextBatch ?? "",
+            createdAt: new Date()
         };
         this.courses.set(id, course);
         return course;
@@ -490,7 +501,6 @@ export class MemStorage {
         const orderNumber = await this.generateOrderNumber();
         const now = new Date();
         const order = {
-            ...insertOrder,
             id,
             orderNumber,
             status: "pending",
@@ -499,10 +509,17 @@ export class MemStorage {
             paymentStatus: "pending",
             createdAt: now,
             updatedAt: now,
-            occasion: insertOrder.occasion ?? null,
-            requirements: insertOrder.requirements ?? null,
-            userId: insertOrder.userId ?? null,
-            deliveryAddress: insertOrder.deliveryAddress ?? null,
+            userId: insertOrder.userId ?? "",
+            customerName: insertOrder.customerName,
+            email: insertOrder.email,
+            phone: insertOrder.phone,
+            occasion: insertOrder.occasion ?? "",
+            requirements: insertOrder.requirements ?? "",
+            items: insertOrder.items,
+            subtotal: insertOrder.subtotal,
+            paymentMethod: insertOrder.paymentMethod,
+            total: insertOrder.total,
+            deliveryAddress: insertOrder.deliveryAddress ?? "",
             deliveryDate: insertOrder.deliveryDate ? new Date(insertOrder.deliveryDate) : null,
             estimatedDeliveryDate: insertOrder.estimatedDeliveryDate ? new Date(insertOrder.estimatedDeliveryDate) : null,
             paymentTransactionId: insertOrder.paymentTransactionId ?? null,
@@ -623,7 +640,12 @@ export class MemStorage {
     async validateAndProcessOrder(orderData) {
         const errors = [];
         // Validate cart items
-        const cartValidation = await this.validateCartItems(orderData.items);
+        const cartItems = orderData.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice
+        }));
+        const cartValidation = await this.validateCartItems(cartItems);
         if (!cartValidation.isValid) {
             errors.push(...(cartValidation.errors || []));
         }
@@ -737,10 +759,14 @@ export class MemStorage {
     async createTestimonial(insertTestimonial) {
         const id = randomUUID();
         const testimonial = {
-            ...insertTestimonial,
             id,
-            createdAt: new Date(),
-            image: insertTestimonial.image ?? null
+            name: insertTestimonial.name,
+            location: insertTestimonial.location,
+            rating: insertTestimonial.rating,
+            comment: insertTestimonial.comment,
+            type: insertTestimonial.type,
+            image: insertTestimonial.image ?? "",
+            createdAt: new Date()
         };
         this.testimonials.set(id, testimonial);
         return testimonial;
@@ -754,8 +780,12 @@ export class MemStorage {
     async createBlogPost(insertBlogPost) {
         const id = randomUUID();
         const post = {
-            ...insertBlogPost,
             id,
+            title: insertBlogPost.title,
+            excerpt: insertBlogPost.excerpt,
+            content: insertBlogPost.content,
+            category: insertBlogPost.category,
+            image: insertBlogPost.image,
             publishedAt: new Date(),
             createdAt: new Date()
         };
@@ -888,16 +918,17 @@ export class MemStorage {
     async createCoupon(insertCoupon) {
         const id = randomUUID();
         const coupon = {
-            ...insertCoupon,
             id,
             code: insertCoupon.code.toUpperCase(),
+            type: insertCoupon.type,
+            value: insertCoupon.value,
             timesUsed: 0,
-            startsAt: insertCoupon.startsAt ?? null,
-            expiresAt: insertCoupon.expiresAt ?? null,
+            startsAt: insertCoupon.startsAt ?? new Date(),
+            expiresAt: insertCoupon.expiresAt ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             minOrderAmount: insertCoupon.minOrderAmount ?? "0",
-            maxDiscount: insertCoupon.maxDiscount ?? null,
-            usageLimit: insertCoupon.usageLimit ?? null,
-            description: insertCoupon.description ?? null,
+            maxDiscount: insertCoupon.maxDiscount ?? "",
+            usageLimit: insertCoupon.usageLimit ?? 1000,
+            description: insertCoupon.description ?? "",
             isActive: insertCoupon.isActive ?? true,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -946,13 +977,19 @@ export class MemStorage {
     async createAddress(address) {
         const newAddress = {
             id: randomUUID(),
-            ...address,
-            email: address.email ?? null,
+            userId: address.userId,
+            fullName: address.fullName,
+            email: address.email ?? "",
+            phone: address.phone,
+            addressLine1: address.addressLine1,
+            addressLine2: address.addressLine2 ?? "",
+            city: address.city,
+            state: address.state,
+            postalCode: address.postalCode,
             country: address.country ?? "",
             addressType: address.addressType ?? "home",
-            addressLine2: address.addressLine2 ?? null,
-            landmark: address.landmark ?? null,
-            isDefault: address.isDefault ?? null,
+            landmark: address.landmark ?? "",
+            isDefault: address.isDefault ?? false,
             createdAt: new Date(),
             updatedAt: new Date(),
         };
@@ -1018,7 +1055,9 @@ export class MemStorage {
     async createDeliveryOption(deliveryOption) {
         const newDeliveryOption = {
             id: randomUUID(),
-            ...deliveryOption,
+            name: deliveryOption.name,
+            description: deliveryOption.description,
+            estimatedDays: deliveryOption.estimatedDays,
             price: deliveryOption.price ?? "0.00",
             isActive: deliveryOption.isActive ?? true,
             sortOrder: deliveryOption.sortOrder ?? 0,

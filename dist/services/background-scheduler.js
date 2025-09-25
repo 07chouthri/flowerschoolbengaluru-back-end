@@ -11,12 +11,14 @@ const statusProgressions = [
     { currentStatus: "shipped", nextStatus: "delivered", progressionTime: 60 }
 ];
 export class BackgroundScheduler {
-    timerHandle = null;
-    interval = 30 * 60 * 1000; // 30 minutes
-    isRunning = false;
-    inProgress = false;
-    lastRun = null;
-    lastResult = null;
+    constructor() {
+        this.timerHandle = null;
+        this.interval = 30 * 60 * 1000; // 30 minutes
+        this.isRunning = false;
+        this.inProgress = false;
+        this.lastRun = null;
+        this.lastResult = null;
+    }
     /**
      * Start running scheduler in background
      */

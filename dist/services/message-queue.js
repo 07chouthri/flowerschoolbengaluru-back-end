@@ -1,11 +1,10 @@
 export class MessageQueue {
-    sendMessage;
-    queue = [];
-    processing = false;
-    maxRetries = 3;
-    retryDelays = [30000, 60000, 300000];
     constructor(sendMessage) {
         this.sendMessage = sendMessage;
+        this.queue = [];
+        this.processing = false;
+        this.maxRetries = 3;
+        this.retryDelays = [30000, 60000, 300000];
     }
     async enqueue(phone, message, type) {
         const id = Math.random().toString(36).substring(7);

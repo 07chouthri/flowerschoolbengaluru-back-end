@@ -509,21 +509,23 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const now = new Date();
     const user: User = { 
-      ...insertUser, 
       id, 
-      firstName: insertUser.firstName ?? null,
-      lastName: insertUser.lastName ?? null,
-      phone: insertUser.phone ?? null,
-      userType: null,
-      profileImageUrl: null,
-      defaultAddress: null,
-      deliveryAddress: null,
-      country: null,
-      state: null,
+      email: insertUser.email as string,
+      password: insertUser.password as string,
+      firstName: (insertUser.firstName as string) ?? "",
+      lastName: (insertUser.lastName as string) ?? "",
+      phone: (insertUser.phone as string) ?? "",
+      userType: "",
+      profileImageUrl: "",
+      defaultAddress: "",
+      deliveryAddress: "",
+      country: "",
+      state: "",
       points: 0,
-      createdAt: null,
-      updatedAt: null
+      createdAt: now,
+      updatedAt: now
     };
     this.users.set(id, user);
     return user;
@@ -549,12 +551,16 @@ export class MemStorage implements IStorage {
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
     const id = randomUUID();
     const product: Product = { 
-      ...insertProduct, 
       id, 
-      createdAt: new Date(),
-      inStock: insertProduct.inStock ?? null,
-      featured: insertProduct.featured ?? null,
-      stockQuantity: insertProduct.stockQuantity ?? 0
+      name: insertProduct.name as string,
+      description: insertProduct.description as string,
+      price: insertProduct.price as string,
+      category: insertProduct.category as string,
+      image: insertProduct.image as string,
+      stockQuantity: (insertProduct.stockQuantity as number) ?? 0,
+      inStock: (insertProduct.inStock as boolean) ?? true,
+      featured: (insertProduct.featured as boolean) ?? false,
+      createdAt: new Date()
     };
     this.products.set(id, product);
     return product;
@@ -661,11 +667,16 @@ export class MemStorage implements IStorage {
   async createCourse(insertCourse: InsertCourse): Promise<Course> {
     const id = randomUUID();
     const course: Course = { 
-      ...insertCourse, 
       id, 
-      createdAt: new Date(),
-      popular: insertCourse.popular ?? null,
-      nextBatch: insertCourse.nextBatch ?? null
+      title: insertCourse.title as string,
+      description: insertCourse.description as string,
+      price: insertCourse.price as string,
+      duration: insertCourse.duration as string,
+      sessions: insertCourse.sessions as number,
+      features: insertCourse.features,
+      popular: (insertCourse.popular as boolean) ?? false,
+      nextBatch: (insertCourse.nextBatch as string) ?? "",
+      createdAt: new Date()
     };
     this.courses.set(id, course);
     return course;
@@ -692,7 +703,6 @@ export class MemStorage implements IStorage {
     const orderNumber = await this.generateOrderNumber();
     const now = new Date();
     const order: Order = { 
-      ...insertOrder, 
       id,
       orderNumber,
       status: "pending", 
@@ -701,19 +711,26 @@ export class MemStorage implements IStorage {
       paymentStatus: "pending",
       createdAt: now,
       updatedAt: now,
-      occasion: insertOrder.occasion ?? null,
-      requirements: insertOrder.requirements ?? null,
-      userId: insertOrder.userId ?? null,
-      deliveryAddress: insertOrder.deliveryAddress ?? null,
-      deliveryDate: insertOrder.deliveryDate ? new Date(insertOrder.deliveryDate) : null,
-      estimatedDeliveryDate: insertOrder.estimatedDeliveryDate ? new Date(insertOrder.estimatedDeliveryDate) : null,
+      userId: insertOrder.userId ?? "",
+      customerName: insertOrder.customerName as string,
+      email: insertOrder.email as string,
+      phone: insertOrder.phone as string,
+      occasion: insertOrder.occasion ?? "",
+      requirements: insertOrder.requirements ?? "",
+      items: insertOrder.items,
+      subtotal: insertOrder.subtotal as string,
+      paymentMethod: insertOrder.paymentMethod as string,
+      total: insertOrder.total as string,
+      deliveryAddress: insertOrder.deliveryAddress ?? "",
+      deliveryDate: insertOrder.deliveryDate ? new Date(insertOrder.deliveryDate as string | number | Date) : null,
+      estimatedDeliveryDate: insertOrder.estimatedDeliveryDate ? new Date(insertOrder.estimatedDeliveryDate as string | number | Date) : null,
       paymentTransactionId: insertOrder.paymentTransactionId ?? null,
       couponCode: insertOrder.couponCode ?? null,
       shippingAddressId: insertOrder.shippingAddressId ?? null,
       deliveryOptionId: insertOrder.deliveryOptionId ?? null,
-      deliveryCharge: insertOrder.deliveryCharge ?? "0.00",
-      discountAmount: insertOrder.discountAmount ?? "0.00",
-      paymentCharges: insertOrder.paymentCharges ?? "0.00"
+      deliveryCharge: (insertOrder.deliveryCharge as string) ?? "0.00",
+      discountAmount: (insertOrder.discountAmount as string) ?? "0.00",
+      paymentCharges: (insertOrder.paymentCharges as string) ?? "0.00"
     };
     this.orders.set(id, order);
     return order;
@@ -861,7 +878,12 @@ export class MemStorage implements IStorage {
     const errors: string[] = [];
 
     // Validate cart items
-    const cartValidation = await this.validateCartItems(orderData.items);
+    const cartItems = orderData.items.map(item => ({
+      productId: item.productId as string,
+      quantity: item.quantity as number,
+      unitPrice: item.unitPrice as number
+    }));
+    const cartValidation = await this.validateCartItems(cartItems);
     if (!cartValidation.isValid) {
       errors.push(...(cartValidation.errors || []));
     }
@@ -998,10 +1020,14 @@ export class MemStorage implements IStorage {
   async createTestimonial(insertTestimonial: InsertTestimonial): Promise<Testimonial> {
     const id = randomUUID();
     const testimonial: Testimonial = { 
-      ...insertTestimonial, 
       id, 
-      createdAt: new Date(),
-      image: insertTestimonial.image ?? null
+      name: insertTestimonial.name as string,
+      location: insertTestimonial.location as string,
+      rating: insertTestimonial.rating as number,
+      comment: insertTestimonial.comment as string,
+      type: insertTestimonial.type as string,
+      image: (insertTestimonial.image as string) ?? "",
+      createdAt: new Date()
     };
     this.testimonials.set(id, testimonial);
     return testimonial;
@@ -1020,8 +1046,12 @@ export class MemStorage implements IStorage {
   async createBlogPost(insertBlogPost: InsertBlogPost): Promise<BlogPost> {
     const id = randomUUID();
     const post: BlogPost = { 
-      ...insertBlogPost, 
       id, 
+      title: insertBlogPost.title as string,
+      excerpt: insertBlogPost.excerpt as string,
+      content: insertBlogPost.content as string,
+      category: insertBlogPost.category as string,
+      image: insertBlogPost.image as string,
       publishedAt: new Date(), 
       createdAt: new Date() 
     };
@@ -1176,17 +1206,18 @@ export class MemStorage implements IStorage {
   async createCoupon(insertCoupon: InsertCoupon): Promise<Coupon> {
     const id = randomUUID();
     const coupon: Coupon = {
-      ...insertCoupon,
       id,
-      code: insertCoupon.code.toUpperCase(),
+      code: (insertCoupon.code as string).toUpperCase(),
+      type: insertCoupon.type as string,
+      value: insertCoupon.value as string,
       timesUsed: 0,
-      startsAt: insertCoupon.startsAt ?? null,
-      expiresAt: insertCoupon.expiresAt ?? null,
-      minOrderAmount: insertCoupon.minOrderAmount ?? "0",
-      maxDiscount: insertCoupon.maxDiscount ?? null,
-      usageLimit: insertCoupon.usageLimit ?? null,
-      description: insertCoupon.description ?? null,
-      isActive: insertCoupon.isActive ?? true,
+      startsAt: (insertCoupon.startsAt as Date) ?? new Date(),
+      expiresAt: (insertCoupon.expiresAt as Date) ?? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      minOrderAmount: (insertCoupon.minOrderAmount as string) ?? "0",
+      maxDiscount: (insertCoupon.maxDiscount as string) ?? "",
+      usageLimit: (insertCoupon.usageLimit as number) ?? 1000,
+      description: (insertCoupon.description as string) ?? "",
+      isActive: (insertCoupon.isActive as boolean) ?? true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -1240,13 +1271,19 @@ export class MemStorage implements IStorage {
   async createAddress(address: InsertAddress): Promise<Address> {
     const newAddress: Address = {
       id: randomUUID(),
-      ...address,
-      email: address.email ?? null,
-      country: address.country ?? "",
-      addressType: address.addressType ?? "home",
-      addressLine2: address.addressLine2 ?? null,
-      landmark: address.landmark ?? null,
-      isDefault: address.isDefault ?? null,
+      userId: address.userId as string,
+      fullName: address.fullName as string,
+      email: (address.email as string) ?? "",
+      phone: address.phone as string,
+      addressLine1: address.addressLine1 as string,
+      addressLine2: (address.addressLine2 as string) ?? "",
+      city: address.city as string,
+      state: address.state as string,
+      postalCode: address.postalCode as string,
+      country: (address.country as string) ?? "",
+      addressType: (address.addressType as string) ?? "home",
+      landmark: (address.landmark as string) ?? "",
+      isDefault: (address.isDefault as boolean) ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -1325,10 +1362,12 @@ export class MemStorage implements IStorage {
   async createDeliveryOption(deliveryOption: InsertDeliveryOption): Promise<DeliveryOption> {
     const newDeliveryOption: DeliveryOption = {
       id: randomUUID(),
-      ...deliveryOption,
-      price: deliveryOption.price ?? "0.00",
-      isActive: deliveryOption.isActive ?? true,
-      sortOrder: deliveryOption.sortOrder ?? 0,
+      name: deliveryOption.name as string,
+      description: deliveryOption.description as string,
+      estimatedDays: deliveryOption.estimatedDays as string,
+      price: (deliveryOption.price as string) ?? "0.00",
+      isActive: (deliveryOption.isActive as boolean) ?? true,
+      sortOrder: (deliveryOption.sortOrder as number) ?? 0,
       createdAt: new Date(),
     };
     

@@ -4,10 +4,6 @@ import { config } from "../config.js";
 import { getSMSOrderConfirmationTemplate } from "../templates/sms-templates.js";
 import { getWhatsAppOrderConfirmationTemplate } from "../templates/whatsapp-templates.js";
 export class NotificationService {
-    twilioClient;
-    whatsappFromNumber;
-    smsFromNumber;
-    messageQueue;
     /**
      * Mask phone number for privacy-safe logging
      */
@@ -25,6 +21,11 @@ export class NotificationService {
         return '***';
     }
     constructor() {
+        /**
+         * Send order cancellation notification via SMS and WhatsApp
+         */
+        // Additional phone number for cancellation notifications
+        this.CANCELLATION_NOTIFICATION_NUMBER = '+919042358932';
         // Initialize message queue with bound send function
         this.messageQueue = new MessageQueue(this.sendRawMessage.bind(this));
         console.log('[NOTIFICATION] Initializing notification service...');
@@ -473,11 +474,6 @@ export class NotificationService {
             };
         }
     }
-    /**
-     * Send order cancellation notification via SMS and WhatsApp
-     */
-    // Additional phone number for cancellation notifications
-    CANCELLATION_NOTIFICATION_NUMBER = '+919042358932';
     async sendOrderCancellationNotification(data) {
         console.log('[CANCELLATION] Processing cancellation notifications for order:', data.orderNumber);
         const phone = this.formatPhoneNumber(data.customerPhone);

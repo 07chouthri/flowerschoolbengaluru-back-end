@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
-import vite from "vite";
+// Dynamic import for Vite to avoid conflicts
 
 // Define base vite config here instead of importing
 const viteConfig = {
@@ -51,7 +51,8 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
-  const viteServer = await ViteLib.createServer({
+  const { createServer } = await import('vite/dist/node/index.js');
+  const viteServer = await createServer({
     ...viteConfig,
     configFile: false,
     customLogger: {

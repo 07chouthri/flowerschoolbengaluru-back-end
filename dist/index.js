@@ -2,7 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes.js";
 import { config } from './config.js';
-// import { setupVite, serveStatic, log } from "./vite.js"; // Commented out for production build
+// import { setupVite, serveStatic, log } from "./vite-setup.js"; // Commented out for production build
 import { backgroundScheduler } from "./services/background-scheduler.js";
 import cors from "cors";
 const app = express();

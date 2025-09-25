@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
-import vite from "vite";
+import * as ViteLib from "vite";
 
 // Define base vite config here instead of importing
 const viteConfig = {
