@@ -5,18 +5,18 @@ export const config = {
     url: process.env.DATABASE_URL || "postgres://postgres:Vyshnudevi7507!@localhost:5432/bouquetbar"
   },
   twilio: {
-    accountSid: process.env.TWILIO_ACCOUNT_SID || "ACa7d60a101d2a07a7d96b1b000d462b3d",
-    authToken: process.env.TWILIO_AUTH_TOKEN || "9b8d6ecef4bb64ed53f6d2d2d6514f7d",
-    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "VA793237945fdb5873770ef0866054a4a9",
+    accountSid: process.env.TWILIO_ACCOUNT_SID || "",
+    authToken: process.env.TWILIO_AUTH_TOKEN || "",
+    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "",
     sms: {
-      fromNumber: process.env.TWILIO_PHONE_NUMBER || "+12567333181",
-      phoneNumber: process.env.TWILIO_PHONE_NUMBER || "+12567333181"
+      fromNumber: process.env.TWILIO_PHONE_NUMBER || "",
+      phoneNumber: process.env.TWILIO_PHONE_NUMBER || ""
     },
     whatsapp: {
-      fromNumber: process.env.TWILIO_WHATSAPP_NUMBER || "+14155238886"
+      fromNumber: process.env.TWILIO_WHATSAPP_NUMBER || ""
     },
     verify: {
-      serviceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "VA793237945fdb5873770ef0866054a4a9"
+      serviceSid: process.env.TWILIO_VERIFY_SERVICE_SID || ""
     }
   },
   server: {
