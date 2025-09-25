@@ -5,7 +5,15 @@
   "scripts": {
     "backend": "tsx watch index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "dev": "npm run backend",
+    "prod:build": "npm run build",
+    "prod:start": "NODE_ENV=production node dist/index.js",
+    "deploy": "npm run build && pm2 start ecosystem.config.json",
+    "restart": "pm2 restart ecommerce-backend",
+    "stop": "pm2 stop ecommerce-backend",
+    "logs": "pm2 logs ecommerce-backend",
+    "status": "pm2 status"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",

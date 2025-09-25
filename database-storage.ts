@@ -39,10 +39,10 @@ import {
   type OrderPlacement,
   type OrderStatusHistory,
   type InsertOrderStatusHistory
-} from "./shared/schema";
-import { db } from "./db";
+} from "./shared/schema.js";
+import { db } from "./db.js";
 import { eq, and, sql, inArray, lte } from "drizzle-orm";
-import { IStorage } from "./storage";
+import { IStorage } from "./storage.js";
 
 export class DatabaseStorage implements IStorage {
 
@@ -81,6 +81,18 @@ export class DatabaseStorage implements IStorage {
             FROM bouquetbar.users
             WHERE email = '${email}'
               AND  password='${password}'
+            LIMIT 1`;
+    console.log('Executing query:', query);
+    const result = await db.query(query);
+    console.log('Query Result:', result.rows || 'No user found');
+    return result.rows[0] || undefined;
+  }
+
+  async getUserByEmailOnly(email: string): Promise<User | undefined> {
+    if (!email) return undefined;
+    const query = `SELECT *
+            FROM bouquetbar.users
+            WHERE email = '${email}'
             LIMIT 1`;
     console.log('Executing query:', query);
     const result = await db.query(query);
@@ -162,26 +174,62 @@ export class DatabaseStorage implements IStorage {
   }
 
 
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    try {
+      const updateFields: string[] = [];
+      if (updates.email) updateFields.push(`email = '${updates.email}'`);
+      if (updates.firstName) updateFields.push(`firstname = '${updates.firstName}'`);
+      if (updates.lastName) updateFields.push(`lastname = '${updates.lastName}'`);
+      if (updates.phone) updateFields.push(`phone = '${updates.phone}'`);
+      if (updates.password) updateFields.push(`password = '${updates.password}'`);
+      if (updates.userType) updateFields.push(`usertype = '${updates.userType}'`);
+
+      // Always update "updated_at"
+      updateFields.push(`updatedat = NOW()`);
+
+      if (updateFields.length === 1) { // Only updatedAt field
+        throw new Error("No fields provided for update.");
+      }
+
+      const updateQuery = `
+        UPDATE bouquetbar.users
+        SET ${updateFields.join(", ")}
+        WHERE id = '${id}'
+        RETURNING *;
+      `;
+      console.log("Executing update query:", updateQuery);
+      const result = await db.query(updateQuery);
+      if (!result.rows || result.rows.length === 0) {
+        throw new Error(`User with id ${id} not found.`);
+      }
+
+      return result.rows[0];
+    } catch (error) {
+      console.error("[USER UPDATE ERROR] Failed to update user:", error);
+      throw error;
+    }
+  }
+
   async updateUserProfile(id: string, profile: Partial<User>): Promise<User> {
     try {
       const updates: string[] = [];
       if (profile.email) updates.push(`email = '${profile.email}'`);
-      if (profile.first_name) updates.push(`firstname = '${profile.first_name}'`);
-      if (profile.last_name) updates.push(`lastname = '${profile.last_name}'`);
+      if (profile.firstName) updates.push(`firstname = '${profile.firstName}'`);
+      if (profile.lastName) updates.push(`lastname = '${profile.lastName}'`);
       if (profile.phone) updates.push(`phone = '${profile.phone}'`);
       if (profile.password) updates.push(`password = '${profile.password}'`);
-      if (profile.user_type) updates.push(`usertype = '${profile.user_type}'`);
-      if (profile.profile_image_url) updates.push(`profileimageurl = '${profile.profile_image_url}'`);
-      if (profile.default_address) updates.push(`defaultaddress = '${profile.default_address}'`);
-      if (profile.delivery_address) updates.push(`deliveryaddress = '${profile.delivery_address}'`);
+      if (profile.userType) updates.push(`usertype = '${profile.userType}'`);
+      if (profile.profileImageUrl) updates.push(`profileimageurl = '${profile.profileImageUrl}'`);
+      if (profile.defaultAddress) updates.push(`defaultaddress = '${profile.defaultAddress}'`);
+      if (profile.deliveryAddress) updates.push(`deliveryaddress = '${profile.deliveryAddress}'`);
       if (profile.country) updates.push(`country = '${profile.country}'`);
       if (profile.state) updates.push(`state = '${profile.state}'`);
       if (profile.points !== undefined) updates.push(`points = ${profile.points}`);
 
       // Always update "updated_at"
-      updates.push(`updated_at = NOW()`);
+      updates.push(`updatedat = NOW()`);
 
-      if (updates.length === 0) {
+      if (updates.length === 1) { // Only updatedAt field
         throw new Error("No fields provided for update.");
       }
       const updateQuery = `
@@ -523,7 +571,7 @@ export class DatabaseStorage implements IStorage {
       ${course.sessions},
       '${JSON.stringify(course.features)}',
       ${course.popular ?? false},
-      '${course.next_batch ?? ''}',
+      '${course.nextBatch ?? ''}',
       NOW()
     )
     RETURNING *;
@@ -593,7 +641,7 @@ export class DatabaseStorage implements IStorage {
       pointsawarded,
       createdat
     ) VALUES (
-      '${order.customer_name}',
+      '${order.customerName}',
       '${order.email}',
       '${order.phone}',
       '${order.occasion ?? ''}',
@@ -601,24 +649,24 @@ export class DatabaseStorage implements IStorage {
       'pending',
       '${JSON.stringify(order.items)}',
       ${order.total},
-      '${order.user_id ?? ''}',
-      '${order.delivery_address ?? ''}',
-      '${order.delivery_date ?? ''}',
+      '${order.userId ?? ''}',
+      '${order.deliveryAddress ?? ''}',
+      '${order.deliveryDate ?? ''}',
       ${order.subtotal},
-      '${order.delivery_option_id ?? ''}',
-      ${order.delivery_charge ?? 0},
-      '${order.coupon_code ?? ''}',
-      ${order.discount_amount ?? 0},
-      '${order.shipping_address_id ?? ''}',
+      '${order.deliveryOptionId ?? ''}',
+      ${order.deliveryCharge ?? 0},
+      '${order.couponCode ?? ''}',
+      ${order.discountAmount ?? 0},
+      '${order.shippingAddressId ?? ''}',
       '${orderNumber}',
-      '${order.payment_method}',
-      ${order.payment_charges ?? 0},
+      '${order.paymentMethod}',
+      ${order.paymentCharges ?? 0},
       'pending',
-      '${order.payment_transaction_id ?? ''}',
-      '${order.estimated_delivery_date ?? ''}',
+      '${order.paymentTransactionId ?? ''}',
+      '${order.estimatedDeliveryDate ?? ''}',
       NOW(),
       NOW(),
-      ${order.points_awarded ?? false},
+      ${order.pointsAwarded ?? false},
       NOW()
     )
     RETURNING *;
@@ -919,109 +967,7 @@ export class DatabaseStorage implements IStorage {
   }
 
 
-  //PROCESS TO CHECK THE ALL DATA:
-  async validateAndProcessOrder(orderData: OrderPlacement): Promise<{
-    isValid: boolean;
-    errors?: string[];
-    validatedOrder?: InsertOrder;
-    calculatedPricing?: {
-      subtotal: number;
-      deliveryCharge: number;
-      discountAmount: number;
-      paymentCharges: number;
-      total: number;
-    };
-  }> {
-    const errors: string[] = [];
-
-    // ✅ Validate cart items
-    const cartValidation = await this.validateCartItems(orderData.items);
-    if (!cartValidation.isValid) {
-      errors.push(...(cartValidation.errors || []));
-    }
-
-    // ✅ Validate delivery option
-    const deliveryOptionQuery = `
-      SELECT * FROM bouquetbar.delivery_options
-      WHERE id = '${orderData.deliveryOptionId}'
-      LIMIT 1;
-    `;
-    const deliveryResult = await db.query(deliveryOptionQuery);
-    const deliveryOption = deliveryResult.rows[0];
-    if (!deliveryOption) {
-      errors.push("Invalid delivery option");
-    }
-
-    // ✅ Validate shipping address
-    if (orderData.userId && orderData.shippingAddressId) {
-      const addressQuery = `
-        SELECT * FROM bouquetbar.addresses
-        WHERE id = '${orderData.shippingAddressId}'
-        AND userid = '${orderData.userId}'
-                  AND isactive=true
-        LIMIT 1;
-      `;
-      const addressResult = await db.query(addressQuery);
-      if (!addressResult.rows[0]) {
-        errors.push("Invalid shipping address");
-      }
-    }
-
-    if (errors.length > 0) {
-      return { isValid: false, errors };
-    }
-
-    // ✅ Calculate pricing server-side
-    const calculatedPricing = await this.calculateOrderPricing(
-      orderData.subtotal,
-      orderData.deliveryOptionId,
-      orderData.couponCode,
-      orderData.paymentMethod
-    );
-
-    // ✅ Validate pricing tolerance
-    const tolerance = 0.01;
-    if (Math.abs(calculatedPricing.deliveryCharge - orderData.deliveryCharge) > tolerance) {
-      errors.push("Delivery charge mismatch");
-    }
-    if (Math.abs(calculatedPricing.discountAmount - orderData.discountAmount) > tolerance) {
-      errors.push("Discount amount mismatch");
-    }
-    if (Math.abs(calculatedPricing.total - orderData.total) > tolerance) {
-      errors.push("Total amount mismatch");
-    }
-
-    if (errors.length > 0) {
-      return { isValid: false, errors };
-    }
-
-    // ✅ Create validated order object
-    const validatedOrder: InsertOrder = {
-      userId: orderData.userId,
-      customerName: orderData.customerName,
-      email: orderData.email,
-      phone: orderData.phone,
-      occasion: orderData.occasion,
-      requirements: orderData.requirements,
-      items: cartValidation.validatedItems!,
-      subtotal: orderData.subtotal.toString(),
-      deliveryOptionId: orderData.deliveryOptionId,
-      deliveryCharge: calculatedPricing.deliveryCharge.toString(),
-      couponCode: orderData.couponCode,
-      discountAmount: calculatedPricing.discountAmount.toString(),
-      paymentMethod: orderData.paymentMethod,
-      paymentCharges: calculatedPricing.paymentCharges.toString(),
-      total: calculatedPricing.total.toString(),
-      shippingAddressId: orderData.shippingAddressId,
-      deliveryAddress: orderData.deliveryAddress,
-      deliveryDate: orderData.deliveryDate ? new Date(orderData.deliveryDate) : undefined,
-      estimatedDeliveryDate: deliveryOption
-        ? new Date(Date.now() + parseInt(deliveryOption.estimateddays.split('-')[0]) * 24 * 60 * 60 * 1000)
-        : undefined
-    };
-
-    return { isValid: true, validatedOrder, calculatedPricing };
-  }
+  //PROCESS TO CHECK THE ALL DATA - Removed duplicate method
 
   async validateCartItems(items: Array<{ productId: string; quantity: number; unitPrice: number }>): Promise<{
     isValid: boolean;
@@ -1082,6 +1028,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async calculateOrderPricing(subtotal: number, deliveryOptionId: string, couponCode?: string, paymentMethod?: string): Promise<{
+    subtotal: number;
     deliveryCharge: number;
     discountAmount: number;
     paymentCharges: number;
@@ -1129,7 +1076,7 @@ export class DatabaseStorage implements IStorage {
 
     const total = subtotal + deliveryCharge - discountAmount + paymentCharges;
 
-    return { deliveryCharge, discountAmount, paymentCharges, total };
+    return { subtotal, deliveryCharge, discountAmount, paymentCharges, total };
   }
 
 
@@ -1260,18 +1207,86 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async cancelOrder(orderId: string) {
+  async cancelOrder(orderId: string, userId?: string) {
+    try {
+      // First get the order to verify ownership if userId is provided
+      if (userId) {
+        const orderCheck = await db.query(`
+          SELECT * FROM bouquetbar.orders 
+          WHERE id = '${orderId}' AND userid = '${userId}'
+          LIMIT 1;
+        `);
+        
+        if (!orderCheck.rows.length) {
+          throw new Error("Order not found or access denied");
+        }
+        
+        const order = orderCheck.rows[0];
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+          throw new Error(`Order cannot be cancelled as it is already ${order.status}`);
+        }
+      }
+
+      const query = `
+        UPDATE bouquetbar.orders
+        SET status = 'cancelled',
+            statusupdated_at = NOW(),
+            updatedat = NOW()
+        WHERE id = '${orderId}'
+        RETURNING *;
+      `;
+      const result = await db.query(query);
+      
+      if (!result.rows[0]) {
+        throw new Error("Order not found");
+      }
+      
+      await this.addOrderStatusHistory(orderId, "cancelled", "Order cancelled");
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error in cancelOrder:', error);
+      throw error;
+    }
+  }
+
+  async incrementCouponUsage(code: string): Promise<Coupon> {
     const query = `
-    UPDATE bouquetbar.orders
-    SET status = 'cancelled',
-        statusupdated_at = NOW(),
-        updatedat = NOW()
-    WHERE id = '${orderId}'
-    RETURNING *;
-  `;
+      UPDATE bouquetbar.coupons
+      SET timesused = timesused + 1, updatedat = NOW()
+      WHERE code = '${code}'
+      RETURNING *;
+    `;
     const result = await db.query(query);
-    await this.addOrderStatusHistory(orderId, "cancelled", "Order cancelled");
     return result.rows[0];
+  }
+
+  async deleteCoupon(id: string): Promise<void> {
+    const query = `
+      DELETE FROM bouquetbar.coupons
+      WHERE id = '${id}';
+    `;
+    await db.query(query);
+  }
+
+  async getAllDeliveryOptions(): Promise<DeliveryOption[]> {
+    const query = `
+      SELECT *
+      FROM bouquetbar.delivery_options
+      ORDER BY sortorder;
+    `;
+    const result = await db.query(query);
+    return result.rows;
+  }
+
+  async getDeliveryOption(id: string): Promise<DeliveryOption | undefined> {
+    const query = `
+      SELECT *
+      FROM bouquetbar.delivery_options
+      WHERE id = '${id}'
+      LIMIT 1;
+    `;
+    const result = await db.query(query);
+    return result.rows[0] || undefined;
   }
 
 
@@ -1340,9 +1355,9 @@ export class DatabaseStorage implements IStorage {
   `;
     console.log("Executing query:", query);
     const result = await db.query(query);
-    console.log("Is Favorited:", result.rowCount > 0);
+    console.log("Is Favorited:", (result.rowCount ?? 0) > 0);
 
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
 
@@ -1589,7 +1604,7 @@ export class DatabaseStorage implements IStorage {
         ${validatedOrder.estimatedDeliveryDate ? `'${validatedOrder.estimatedDeliveryDate.toISOString()}'` : "NULL"},
         NOW(),
         NOW(),
-        ${validatedOrder.pointsawarded ? "true" : "false"}
+        ${validatedOrder.pointsAwarded ? "true" : "false"}
       )
       RETURNING *;
     `;
@@ -1851,7 +1866,7 @@ export class DatabaseStorage implements IStorage {
   async addCoupon(coupon: InsertCoupon): Promise<Coupon> {
     const query = `
     INSERT INTO bouquetbar.coupons (code, type, value, maxdiscount, minordervalue, expiresat, createdat)
-    VALUES ('${coupon.code}', '${coupon.type}', ${coupon.value}, ${coupon.maxDiscount || 0}, ${coupon.minOrderValue || 0}, ${coupon.expiresAt ? `'${coupon.expiresAt}'` : 'NULL'}, NOW())
+    VALUES ('${coupon.code}', '${coupon.type}', ${coupon.value}, ${coupon.maxDiscount || 0}, ${coupon.minOrderAmount || 0}, ${coupon.expiresAt ? `'${coupon.expiresAt}'` : 'NULL'}, NOW())
     RETURNING *;
   `;
     const result = await db.query(query);
@@ -1868,6 +1883,94 @@ export class DatabaseStorage implements IStorage {
   `;
     const result = await db.query(query);
     return result.rows[0] || undefined;
+  }
+
+  async getCouponByCode(code: string): Promise<Coupon | undefined> {
+    const normalizedCode = code.trim().toUpperCase();
+    const query = `
+    SELECT *
+    FROM bouquetbar.coupons
+    WHERE UPPER(code) = '${normalizedCode}'
+    LIMIT 1;
+  `;
+    const result = await db.query(query);
+    return result.rows[0] || undefined;
+  }
+
+  async getAllCoupons(): Promise<Coupon[]> {
+    const query = `
+    SELECT *
+    FROM bouquetbar.coupons
+    ORDER BY createdat DESC;
+  `;
+    const result = await db.query(query);
+    return result.rows;
+  }
+
+  async createCoupon(coupon: InsertCoupon): Promise<Coupon> {
+    const query = `
+    INSERT INTO bouquetbar.coupons (code, type, value, maxdiscount, minordervalue, expiresat, createdat)
+    VALUES ('${coupon.code}', '${coupon.type}', ${coupon.value}, ${coupon.maxDiscount || 0}, ${coupon.minOrderAmount || 0}, ${coupon.expiresAt ? `'${coupon.expiresAt}'` : 'NULL'}, NOW())
+    RETURNING *;
+  `;
+    const result = await db.query(query);
+    return result.rows[0];
+  }
+
+  async updateCoupon(id: string, updates: Partial<Coupon>): Promise<Coupon> {
+    const updateFields: string[] = [];
+    if (updates.code) updateFields.push(`code = '${updates.code}'`);
+    if (updates.type) updateFields.push(`type = '${updates.type}'`);
+    if (updates.value) updateFields.push(`value = ${updates.value}`);
+    if (updates.maxDiscount !== undefined) updateFields.push(`maxdiscount = ${updates.maxDiscount}`);
+    if (updates.minOrderAmount !== undefined) updateFields.push(`minordervalue = ${updates.minOrderAmount}`);
+    if (updates.expiresAt) updateFields.push(`expiresat = '${updates.expiresAt}'`);
+    updateFields.push(`updatedat = NOW()`);
+
+    const query = `
+    UPDATE bouquetbar.coupons
+    SET ${updateFields.join(', ')}
+    WHERE id = '${id}'
+    RETURNING *;
+  `;
+    const result = await db.query(query);
+    return result.rows[0];
+  }
+
+  async updateAddress(id: string, updates: Partial<Address>): Promise<Address> {
+    try {
+      const updateFields: string[] = [];
+      if (updates.fullName) updateFields.push(`fullname = '${updates.fullName}'`);
+      if (updates.phone) updateFields.push(`phone = '${updates.phone}'`);
+      if (updates.email) updateFields.push(`email = '${updates.email}'`);
+      if (updates.addressLine1) updateFields.push(`addressline1 = '${updates.addressLine1}'`);
+      if (updates.addressLine2 !== undefined) updateFields.push(`addressline2 = ${updates.addressLine2 ? `'${updates.addressLine2}'` : 'NULL'}`);
+      if (updates.landmark !== undefined) updateFields.push(`landmark = ${updates.landmark ? `'${updates.landmark}'` : 'NULL'}`);
+      if (updates.city) updateFields.push(`city = '${updates.city}'`);
+      if (updates.state) updateFields.push(`state = '${updates.state}'`);
+      if (updates.postalCode) updateFields.push(`postalcode = '${updates.postalCode}'`);
+      if (updates.country) updateFields.push(`country = '${updates.country}'`);
+      if (updates.addressType) updateFields.push(`addresstype = '${updates.addressType}'`);
+      if (updates.isDefault !== undefined) updateFields.push(`isdefault = ${updates.isDefault}`);
+      
+      updateFields.push(`updatedat = NOW()`);
+
+      const query = `
+        UPDATE bouquetbar.addresses
+        SET ${updateFields.join(', ')}
+        WHERE id = '${id}' AND isactive = true
+        RETURNING *;
+      `;
+      
+      const result = await db.query(query);
+      if (!result.rows[0]) {
+        throw new Error(`Address with id ${id} not found`);
+      }
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error in updateAddress:', error);
+      throw new Error(`Failed to update address: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
 
@@ -1887,22 +1990,22 @@ export class DatabaseStorage implements IStorage {
       return { isValid: false, error: "Coupon has expired" };
     }
 
-    if (coupon.minOrderValue && orderSubtotal < coupon.minOrderValue) {
+    if (coupon.minOrderAmount && orderSubtotal < parseFloat(coupon.minOrderAmount)) {
       return {
         isValid: false,
-        error: `Order subtotal must be at least ${coupon.minOrderValue} to use this coupon`
+        error: `Order subtotal must be at least ${coupon.minOrderAmount} to use this coupon`
       };
     }
 
     // Calculate discount
     let discount = 0;
     if (coupon.type === "percentage") {
-      discount = (orderSubtotal * coupon.value) / 100;
+      discount = (orderSubtotal * parseFloat(coupon.value)) / 100;
       if (coupon.maxDiscount) {
-        discount = Math.min(discount, coupon.maxDiscount);
+        discount = Math.min(discount, parseFloat(coupon.maxDiscount));
       }
     } else {
-      discount = Math.min(coupon.value, orderSubtotal);
+      discount = Math.min(parseFloat(coupon.value), orderSubtotal);
     }
 
     return { isValid: true, discount };
@@ -1916,8 +2019,9 @@ export class DatabaseStorage implements IStorage {
       ORDER BY created_at DESC ;
   `;
     console.log('Executing query:', query);
-    await db.query(query);
-    console.log('User deleted successfully');
+    const result = await db.query(query);
+    console.log('Query executed successfully');
+    return result.rows || [];
   }
 
   async getEvents(): Promise<Event[]> {
@@ -1989,30 +2093,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-async getAllOrders(): Promise<Order[]> {
-    const query = `
-SELECT 
-    o.id AS order_id,
-    o.customername,
-    o.email,
-    o.phone,
-    o.status,
-    o.ordernumber,
-    o.paymentmethod,
-    p.id AS product_id,
-    p.name AS product_name,
-    p.price,
-    p.image
-FROM bouquetbar.orders o
-JOIN LATERAL jsonb_array_elements(o.items::jsonb) AS item ON true
-JOIN bouquetbar.products p 
-    ON p.id = item ->> 'productId'
-ORDER BY o.customername DESC;
-  `;
-    console.log('Executing query:', query);
-    const result = await db.query(query);
-    return result.rows || [];
-  }
+
 
 
    async updateOrderStatus(id: string, status: string): Promise<Order> {
@@ -2153,5 +2234,3 @@ ORDER BY o.customername DESC;
 
 
 }
-
-

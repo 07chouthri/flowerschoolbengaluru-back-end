@@ -1,0 +1,7 @@
+2025-09-25T21:17:13: [NOTIFICATION] Initializing notification service...
+2025-09-25T21:17:13: [NOTIFICATION] Initializing Twilio client...
+2025-09-25T21:17:13: [WHATSAPP] Configured with number: wha******8886
+2025-09-25T21:17:13: [NOTIFICATION] Initialized WhatsApp with number: whatsapp:+14155238886
+2025-09-25T21:17:13: Server starting in production mode
+2025-09-25T21:17:13: serving on port 5000
+2025-09-25T21:17:13: Background scheduler started for order status progression

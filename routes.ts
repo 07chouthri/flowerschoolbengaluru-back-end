@@ -1,11 +1,11 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { insertOrderSchema, insertEnrollmentSchema, insertUserSchema, updateUserProfileSchema, validateCouponSchema, insertAddressSchema, addressValidationSchema, orderPlacementSchema } from "./shared/schema";
+import { storage } from "./storage.js";
+import { insertOrderSchema, insertEnrollmentSchema, insertUserSchema, updateUserProfileSchema, validateCouponSchema, insertAddressSchema, addressValidationSchema, orderPlacementSchema } from "./shared/schema.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import twilio from "twilio";
-import { notificationService } from "./services/notification-service";
+import { notificationService } from "./services/notification-service.js";
 import { Console } from "console";
 
 // Simple in-memory session storage
@@ -14,7 +14,7 @@ const sessions: Map<string, { userId: string; expires: number }> = new Map();
 // Simple in-memory OTP storage
 const otpStorage: Map<string, { otp: string; expires: number; verified: boolean }> = new Map();
 
-import { config } from './config';
+import { config } from './config.js';
 
 // Initialize Twilio client for Verify service
 const twilioClient = twilio(
@@ -231,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      const existingUserByEmail = await storage.getUserByEmail(userData.email);
+      const existingUserByEmail = await storage.getUserByEmailOnly(userData.email);
       if (existingUserByEmail) {
         return res.status(400).json({
           status: 'error',
@@ -241,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       console.log('Signup attempt for email:', userData.email);
-      const existingUserByPhone = await storage.getUserByPhone(userData.phone);
+      const existingUserByPhone = userData.phone ? await storage.getUserByPhone(userData.phone) : null;
       if (existingUserByPhone) {
         return res.status(400).json({
           status: 'error',
@@ -356,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
-      if (isValidPassword) {
+      if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid credentials. Password mismatch" });
       }
 
@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user exists
       let user;
       if (contactType === "email") {
-        user = await storage.getUserByEmail(contact);
+        user = await storage.getUserByEmailOnly(contact);
       } else {
         user = await storage.getUserByPhone(contact);
       }
@@ -556,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find user
       let user;
       if (contactType === "email") {
-        user = await storage.getUserByEmail(contact);
+        user = await storage.getUserByEmailOnly(contact);
       } else {
         // Normalize phone number by removing spaces and formatting consistently
         const cleanPhone = contact.replace(/\s+/g, ''); // Remove all spaces
@@ -871,7 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderNumber: createdOrder.orderNumber || `ORD-${createdOrder.id.slice(0, 8)}`,
         customerName: createdOrder.customerName || 'Customer',
         phone: createdOrder.phone || '',
-        total: typeof createdOrder.total === 'number' ? createdOrder.total.toString() : createdOrder.total || '0',
+        total: createdOrder.total?.toString() || '0',
         estimatedDeliveryDate: createdOrder.estimatedDeliveryDate || new Date(Date.now() + 24 * 60 * 60 * 1000),
         items: Array.isArray(createdOrder.items) ? createdOrder.items.map(item => ({
           name: item.name || 'Product',
@@ -884,7 +884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       console.log(`[NOTIFICATION] Triggering async notifications for order:`, {
-        orderId: orderForNotification.id,
+        orderId: createdOrder.id,
         orderNumber: orderForNotification.orderNumber,
         customerName: orderForNotification.customerName,
         phone: orderForNotification.phone
@@ -1156,7 +1156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             courseTitle: course.title,
             batch: enrollmentData.batch || 'Next Available Batch',
             adminPhone: config.admin.phone,
-            questions: enrollmentData.questions
+            questions: enrollmentData.questions || undefined
           });
 
           console.log("[ENROLLMENT] Notification result:", {
@@ -1340,15 +1340,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders/:id/cancel", async (req, res) => {
     try {
       const user = await getUserFromSession(req);
+      if (!user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
       const orderId = req.params.id;
-      const cancelledOrder = await storage.cancelOrder(orderId);
+      const cancelledOrder = await storage.cancelOrder(orderId, user.id);
       try {
         await notificationService.sendOrderCancellationNotification({
           orderId: cancelledOrder.id,
           orderNumber: cancelledOrder.orderNumber,
-          customerName: (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : user.email,
+          customerName: (user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : user?.email || 'Customer',
           customerPhone: cancelledOrder.phone,
-          refundAmount: cancelledOrder.total,
+          total: cancelledOrder.total?.toString() || '0',
+          deliveryAddress: cancelledOrder.deliveryAddress || 'N/A',
+          paymentMethod: cancelledOrder.paymentMethod || "Original payment method",
+          refundAmount: cancelledOrder.total?.toString() || '0',
           refundMethod: cancelledOrder.paymentMethod || "Original payment method"
         });
       } catch (notificationError) {
@@ -1407,17 +1413,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if order can still have address changed (not shipped or delivered)
-      if (["shipped", "delivered", "cancelled"].includes(order.status)) {
+      if (order.status && ["shipped", "delivered", "cancelled"].includes(order.status)) {
         return res.status(400).json({
           message: `Cannot change address for ${order.status} orders`
         });
       }
 
       // Update the order address
-      const updatedOrder = await storage.updateOrderAddress(orderId, deliveryAddress, deliveryPhone);
+      const updatedOrder = await storage.updateOrderAddress(orderId, deliveryAddress);
 
       // Add status history entry
-      await storage.addOrderStatusHistory(orderId, order.status, `Address updated to: ${deliveryAddress}`);
+      await storage.addOrderStatusHistory(orderId, order.status || 'pending', `Address updated to: ${deliveryAddress}`);
 
       res.json({
         success: true,
@@ -1561,7 +1567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Favorites Management Routes
   app.get("/api/favorites", async (req, res) => {
     try {
-      const favorites = await storage.getUserFavorites(req.id);
+      const user = await getUserFromSession(req);
+      if (!user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      const favorites = await storage.getUserFavorites(user.id);
       res.json(favorites);
     } catch (error) {
       console.error("Error fetching user favorites:", error);
@@ -1894,7 +1904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get event details first
       const event = await storage.getEvents();
-      const matchingEvent = event.find(e => e.id === req.body.eventId);
+      const matchingEvent = event.find((e: any) => e.id === req.body.eventId);
       
       if (!matchingEvent) {
         console.error(`[EVENT ENROLLMENT] Event not found with ID: ${req.body.eventId}`);
@@ -1931,9 +1941,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             studentPhone,
             studentName: `${req.body.firstName} ${req.body.lastName}`,
             studentEmail: req.body.email,
-            eventTitle: matchingEvent.title,
-            eventDate: matchingEvent.event_date,
-            eventTime: matchingEvent.event_time,
+            eventTitle: (matchingEvent as any).title,
+            eventDate: (matchingEvent as any).event_date,
+            eventTime: (matchingEvent as any).event_time,
             adminPhone: config.admin.phone
           });
 
@@ -1941,7 +1951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             studentNotificationStatus: notificationResult.studentNotification.success ? 'sent' : 'failed',
             adminNotificationStatus: notificationResult.adminNotification.success ? 'sent' : 'failed',
             studentPhone: studentPhone.slice(0, 3) + '****' + studentPhone.slice(-4),
-            eventTitle: matchingEvent.title,
+            eventTitle: (matchingEvent as any).title,
             enrollmentId: enrollment.id
           });
 
@@ -1957,10 +1967,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Event enrollment created successfully",
         data: {
           ...enrollment,
-          eventTitle: matchingEvent.title,
-          eventDate: matchingEvent.event_date,
-          eventTime: matchingEvent.event_time,
-          price: matchingEvent.price
+          eventTitle: (matchingEvent as any).title,
+          eventDate: (matchingEvent as any).event_date,
+          eventTime: (matchingEvent as any).event_time,
+          price: (matchingEvent as any).price
         }
       });
 
@@ -2162,6 +2172,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 });
+
+  // Health check endpoint for monitoring and load balancers
+  app.get("/health", (req, res) => {
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || "development",
+      version: process.env.npm_package_version || "1.0.0"
+    });
+  });
+
+  // Alternative health check endpoints
+  app.get("/ping", (req, res) => {
+    res.status(200).send("pong");
+  });
+
+  app.get("/status", (req, res) => {
+    res.status(200).json({
+      status: "running",
+      timestamp: new Date().toISOString()
+    });
+  });
 
   const httpServer = createServer(app);
   return httpServer;

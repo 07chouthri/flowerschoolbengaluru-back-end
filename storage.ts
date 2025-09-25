@@ -1,6 +1,6 @@
-import { type User, type InsertUser, type Product, type InsertProduct, type Course, type InsertCourse, type Order, type InsertOrder, type Enrollment, type InsertEnrollment, type Testimonial, type InsertTestimonial, type BlogPost, type InsertBlogPost, type Cart, type InsertCart, type Favorite, type InsertFavorite, type Coupon, type InsertCoupon, type Address, type InsertAddress, type DeliveryOption, type InsertDeliveryOption, type OrderPlacement, type OrderStatusHistory, type InsertOrderStatusHistory } from "server/shared/schema";
+import { type User, type InsertUser, type Product, type InsertProduct, type Course, type InsertCourse, type Order, type InsertOrder, type Enrollment, type InsertEnrollment, type Testimonial, type InsertTestimonial, type BlogPost, type InsertBlogPost, type Cart, type InsertCart, type Favorite, type InsertFavorite, type Coupon, type InsertCoupon, type Address, type InsertAddress, type DeliveryOption, type InsertDeliveryOption, type OrderPlacement, type OrderStatusHistory, type InsertOrderStatusHistory } from "./shared/schema.js";
 import { randomUUID } from "crypto";
-import { DatabaseStorage } from "./database-storage";
+import { DatabaseStorage } from "./database-storage.js";
 
 export interface IStorage {
   // Users
@@ -553,7 +553,8 @@ export class MemStorage implements IStorage {
       id, 
       createdAt: new Date(),
       inStock: insertProduct.inStock ?? null,
-      featured: insertProduct.featured ?? null
+      featured: insertProduct.featured ?? null,
+      stockQuantity: insertProduct.stockQuantity ?? 0
     };
     this.products.set(id, product);
     return product;
@@ -708,7 +709,11 @@ export class MemStorage implements IStorage {
       estimatedDeliveryDate: insertOrder.estimatedDeliveryDate ? new Date(insertOrder.estimatedDeliveryDate) : null,
       paymentTransactionId: insertOrder.paymentTransactionId ?? null,
       couponCode: insertOrder.couponCode ?? null,
-      shippingAddressId: insertOrder.shippingAddressId ?? null
+      shippingAddressId: insertOrder.shippingAddressId ?? null,
+      deliveryOptionId: insertOrder.deliveryOptionId ?? null,
+      deliveryCharge: insertOrder.deliveryCharge ?? "0.00",
+      discountAmount: insertOrder.discountAmount ?? "0.00",
+      paymentCharges: insertOrder.paymentCharges ?? "0.00"
     };
     this.orders.set(id, order);
     return order;
@@ -940,7 +945,10 @@ export class MemStorage implements IStorage {
     return {
       isValid: true,
       validatedOrder,
-      calculatedPricing
+      calculatedPricing: {
+        subtotal: orderData.subtotal,
+        ...calculatedPricing
+      }
     };
   }
 
@@ -954,7 +962,7 @@ export class MemStorage implements IStorage {
 
   async createEnrollment(insertEnrollment: InsertEnrollment): Promise<Enrollment> {
     // Validate the course exists first
-    const course = await this.getCourse(insertEnrollment.courseid);
+    const course = await this.getCourse(insertEnrollment.courseId);
     if (!course) {
       throw new Error("Course not found");
     }
@@ -966,10 +974,10 @@ export class MemStorage implements IStorage {
       ...insertEnrollment, 
       id,
       status: "pending",
-      fullname: insertEnrollment.fullname,
+      fullName: insertEnrollment.fullName,
       email: insertEnrollment.email,
       phone: insertEnrollment.phone,
-      courseid: insertEnrollment.courseid,
+      courseId: insertEnrollment.courseId,
       batch: insertEnrollment.batch ?? null,
       questions: insertEnrollment.questions ?? null,
       createdAt: now
@@ -1107,23 +1115,10 @@ export class MemStorage implements IStorage {
     keysToDelete.forEach(key => this.carts.delete(key));
   }
 
-  // Additional Orders methods
-  async getUserOrders(userId: string): Promise<Order[]> {
-    return Array.from(this.orders.values()).filter(order => order.userId === userId);
-  }
-
-  async updateOrderStatus(id: string, status: string): Promise<Order> {
-    const order = this.orders.get(id);
-    if (!order) {
-      throw new Error("Order not found");
-    }
-    const updatedOrder = { ...order, status };
-    this.orders.set(id, updatedOrder);
-    return updatedOrder;
-  }
+  // Additional Orders methods - implementation provided below in main methods section
 
   // Favorites methods (MemStorage implementation - minimal for development)
-  private favorites: Map<string, Favorite> = new Map();
+  // Note: favorites Map is already declared at the top of the class
 
   async getUserFavorites(userId: string): Promise<(Favorite & { product: Product })[]> {
     const userFavorites = Array.from(this.favorites.values()).filter(fav => fav.userId === userId);
@@ -1246,6 +1241,12 @@ export class MemStorage implements IStorage {
     const newAddress: Address = {
       id: randomUUID(),
       ...address,
+      email: address.email ?? null,
+      country: address.country ?? "",
+      addressType: address.addressType ?? "home",
+      addressLine2: address.addressLine2 ?? null,
+      landmark: address.landmark ?? null,
+      isDefault: address.isDefault ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -1308,13 +1309,13 @@ export class MemStorage implements IStorage {
   // Delivery Options Methods
   async getAllDeliveryOptions(): Promise<DeliveryOption[]> {
     return Array.from(this.deliveryOptions.values())
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
   async getActiveDeliveryOptions(): Promise<DeliveryOption[]> {
     return Array.from(this.deliveryOptions.values())
       .filter(option => option.isActive)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
   async getDeliveryOption(id: string): Promise<DeliveryOption | undefined> {
@@ -1325,6 +1326,9 @@ export class MemStorage implements IStorage {
     const newDeliveryOption: DeliveryOption = {
       id: randomUUID(),
       ...deliveryOption,
+      price: deliveryOption.price ?? "0.00",
+      isActive: deliveryOption.isActive ?? true,
+      sortOrder: deliveryOption.sortOrder ?? 0,
       createdAt: new Date(),
     };
     
@@ -1339,29 +1343,21 @@ export class MemStorage implements IStorage {
     userId?: string
   ): Promise<Order> {
     try {
-      // 1. Generate order number
-      const orderNumber = await this.generateOrderNumber();
-      
-      // 2. Create the order with proper stock decrement
+      // 1. Create the order with proper stock decrement
       const orderItems = validatedOrder.items as Array<{ productId: string; quantity: number }>;
       
-      // 3. Decrement product stock atomically
+      // 2. Decrement product stock atomically
       await this.decrementProductsStock(orderItems);
       
-      // 4. Create the order after successful stock decrement
-      const createdOrder = await this.createOrder({
-        ...validatedOrder,
-        orderNumber,
-        status: "pending" as const,
-        paymentStatus: "pending" as const
-      });
+      // 3. Create the order after successful stock decrement
+      const createdOrder = await this.createOrder(validatedOrder);
 
-      // 5. Increment coupon usage if coupon was applied
+      // 4. Increment coupon usage if coupon was applied
       if (couponCode) {
         await this.incrementCouponUsage(couponCode);
       }
 
-      // 6. Clear user cart if this was an authenticated user
+      // 5. Clear user cart if this was an authenticated user
       if (userId) {
         await this.clearUserCart(userId);
       }
@@ -1433,7 +1429,7 @@ export class MemStorage implements IStorage {
     if (order.userId !== userId) {
       throw new Error("Unauthorized to cancel this order");
     }
-    if (!["pending", "confirmed", "processing"].includes(order.status)) {
+    if (!order.status || !["pending", "confirmed", "processing"].includes(order.status)) {
       throw new Error("Order cannot be cancelled in current status");
     }
 
@@ -1483,7 +1479,7 @@ export class MemStorage implements IStorage {
 
   async listAdvancableOrders(cutoffDate: Date, statuses: string[]): Promise<Order[]> {
     return Array.from(this.orders.values()).filter(order => 
-      statuses.includes(order.status) && 
+      order.status && statuses.includes(order.status) && 
       order.statusUpdatedAt && 
       order.statusUpdatedAt <= cutoffDate
     );
@@ -1533,5 +1529,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-import { DatabaseStorage } from "./database-storage";
+// DatabaseStorage is already imported at the top
 export const storage = new DatabaseStorage();

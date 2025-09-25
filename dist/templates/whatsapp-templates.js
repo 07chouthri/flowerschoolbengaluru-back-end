@@ -1,30 +1,23 @@
-import { type OrderNotificationData } from "../shared/schema";
-
 /**
  * Generate WhatsApp order confirmation message with rich formatting
  */
-export function getWhatsAppOrderConfirmationTemplate(data: OrderNotificationData): string {
-  const deliveryDate = data.estimatedDeliveryDate 
-    ? new Date(data.estimatedDeliveryDate).toLocaleDateString('en-IN', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
-    : 'within 2-3 business days';
-
-  // Create detailed item list for WhatsApp (can be longer than SMS)
-  const itemsList = data.items.map((item: any, index: number) => 
-    `${index + 1}. ${item.name} - Qty: ${item.quantity} - ${item.price}`
-  ).join('\n');
-
-  // Payment status with emoji
-  const paymentStatusEmoji = data.paymentStatus === 'completed' ? '✅' : '⏳';
-  const paymentMsg = data.paymentStatus === 'completed' 
-    ? '✅ *Payment Confirmed*' 
-    : `⏳ *Payment*: ${data.paymentMethod}`;
-
-  return `🌸 *BOUQUET BAR - ORDER CONFIRMED* 🌸
+export function getWhatsAppOrderConfirmationTemplate(data) {
+    const deliveryDate = data.estimatedDeliveryDate
+        ? new Date(data.estimatedDeliveryDate).toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        })
+        : 'within 2-3 business days';
+    // Create detailed item list for WhatsApp (can be longer than SMS)
+    const itemsList = data.items.map((item, index) => `${index + 1}. ${item.name} - Qty: ${item.quantity} - ${item.price}`).join('\n');
+    // Payment status with emoji
+    const paymentStatusEmoji = data.paymentStatus === 'completed' ? '✅' : '⏳';
+    const paymentMsg = data.paymentStatus === 'completed'
+        ? '✅ *Payment Confirmed*'
+        : `⏳ *Payment*: ${data.paymentMethod}`;
+    return `🌸 *BOUQUET BAR - ORDER CONFIRMED* 🌸
 
 Hello *${data.customerName}*! 👋
 
@@ -67,52 +60,40 @@ Thank you for choosing Bouquet Bar! We're excited to make your special moments e
 
 _This is an automated message. Please save our number for order updates._`;
 }
-
 /**
  * Generate WhatsApp order status update message
  */
-export function getWhatsAppStatusUpdateTemplate(
-  orderNumber: string,
-  status: string,
-  customerName: string,
-  message?: string,
-  estimatedDelivery?: Date
-): string {
-  const statusEmojis = {
-    confirmed: '✅',
-    processing: '👩‍🌾',
-    shipped: '🚚',
-    delivered: '🎉',
-    cancelled: '❌'
-  };
-
-  const statusMessages = {
-    confirmed: '*Order Confirmed* - Our florists have started preparing your beautiful arrangement',
-    processing: '*Being Prepared* - Your flowers are being carefully arranged by our expert team',
-    shipped: '*Out for Delivery* - Your order is on its way to you!',
-    delivered: '*Delivered Successfully* - Hope you love your beautiful flowers!',
-    cancelled: '*Order Cancelled* - Your order has been cancelled as requested'
-  };
-
-  const statusEmoji = statusEmojis[status as keyof typeof statusEmojis] || '📋';
-  const statusMessage = statusMessages[status as keyof typeof statusMessages] || `Order status updated to: ${status}`;
-  
-  let deliveryInfo = '';
-  if (status === 'shipped' && estimatedDelivery) {
-    const deliveryDate = new Date(estimatedDelivery).toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
-    deliveryInfo = `\n🕒 *Expected Delivery*: ${deliveryDate}`;
-  }
-
-  let customMessage = '';
-  if (message) {
-    customMessage = `\n\n💬 *Note*: ${message}`;
-  }
-
-  return `🌸 *BOUQUET BAR - ORDER UPDATE* 🌸
+export function getWhatsAppStatusUpdateTemplate(orderNumber, status, customerName, message, estimatedDelivery) {
+    const statusEmojis = {
+        confirmed: '✅',
+        processing: '👩‍🌾',
+        shipped: '🚚',
+        delivered: '🎉',
+        cancelled: '❌'
+    };
+    const statusMessages = {
+        confirmed: '*Order Confirmed* - Our florists have started preparing your beautiful arrangement',
+        processing: '*Being Prepared* - Your flowers are being carefully arranged by our expert team',
+        shipped: '*Out for Delivery* - Your order is on its way to you!',
+        delivered: '*Delivered Successfully* - Hope you love your beautiful flowers!',
+        cancelled: '*Order Cancelled* - Your order has been cancelled as requested'
+    };
+    const statusEmoji = statusEmojis[status] || '📋';
+    const statusMessage = statusMessages[status] || `Order status updated to: ${status}`;
+    let deliveryInfo = '';
+    if (status === 'shipped' && estimatedDelivery) {
+        const deliveryDate = new Date(estimatedDelivery).toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+        deliveryInfo = `\n🕒 *Expected Delivery*: ${deliveryDate}`;
+    }
+    let customMessage = '';
+    if (message) {
+        customMessage = `\n\n💬 *Note*: ${message}`;
+    }
+    return `🌸 *BOUQUET BAR - ORDER UPDATE* 🌸
 
 Hi *${customerName}*! 👋
 
@@ -129,29 +110,20 @@ ${statusEmoji} ${statusMessage}
 
 Thank you for choosing Bouquet Bar! 🌹`;
 }
-
 /**
  * Generate WhatsApp delivery reminder message
  */
-export function getWhatsAppDeliveryReminderTemplate(
-  orderNumber: string,
-  customerName: string,
-  deliveryDate: Date,
-  deliveryAddress: string,
-  timeSlot?: string
-): string {
-  const deliveryDateStr = new Date(deliveryDate).toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  });
-
-  let timeInfo = '';
-  if (timeSlot) {
-    timeInfo = `\n🕒 *Time Slot*: ${timeSlot}`;
-  }
-
-  return `🌸 *BOUQUET BAR - DELIVERY TODAY* 🌸
+export function getWhatsAppDeliveryReminderTemplate(orderNumber, customerName, deliveryDate, deliveryAddress, timeSlot) {
+    const deliveryDateStr = new Date(deliveryDate).toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+    });
+    let timeInfo = '';
+    if (timeSlot) {
+        timeInfo = `\n🕒 *Time Slot*: ${timeSlot}`;
+    }
+    return `🌸 *BOUQUET BAR - DELIVERY TODAY* 🌸
 
 Hi *${customerName}*! 👋
 
@@ -182,27 +154,19 @@ Hi *${customerName}*! 👋
 
 We can't wait for you to see your beautiful arrangement! 🌹✨`;
 }
-
 /**
  * Generate WhatsApp payment reminder message
  */
-export function getWhatsAppPaymentReminderTemplate(
-  orderNumber: string,
-  customerName: string,
-  amount: string,
-  paymentMethod: string,
-  dueDate?: Date
-): string {
-  let dueDateInfo = '';
-  if (dueDate) {
-    const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'long'
-    });
-    dueDateInfo = `\n📅 *Due Date*: ${dueDateStr}`;
-  }
-
-  return `🌸 *BOUQUET BAR - PAYMENT PENDING* 🌸
+export function getWhatsAppPaymentReminderTemplate(orderNumber, customerName, amount, paymentMethod, dueDate) {
+    let dueDateInfo = '';
+    if (dueDate) {
+        const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long'
+        });
+        dueDateInfo = `\n📅 *Due Date*: ${dueDateStr}`;
+    }
+    return `🌸 *BOUQUET BAR - PAYMENT PENDING* 🌸
 
 Hi *${customerName}*! 👋
 
@@ -228,29 +192,20 @@ Reply to this message with "PAY ${orderNumber}" or call us for assistance.
 
 Once payment is received, we'll immediately start preparing your order! 🌹`;
 }
-
 /**
  * Generate WhatsApp promotional message
  */
-export function getWhatsAppPromotionalTemplate(
-  customerName: string,
-  offer: string,
-  validUntil: Date,
-  couponCode?: string,
-  imageUrl?: string
-): string {
-  const validDate = new Date(validUntil).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-
-  let couponInfo = '';
-  if (couponCode) {
-    couponInfo = `\n🎫 *Coupon Code*: ${couponCode}`;
-  }
-
-  return `🌸 *BOUQUET BAR - SPECIAL OFFER* 🌸
+export function getWhatsAppPromotionalTemplate(customerName, offer, validUntil, couponCode, imageUrl) {
+    const validDate = new Date(validUntil).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+    let couponInfo = '';
+    if (couponCode) {
+        couponInfo = `\n🎫 *Coupon Code*: ${couponCode}`;
+    }
+    return `🌸 *BOUQUET BAR - SPECIAL OFFER* 🌸
 
 Hi *${customerName}*! 👋
 
@@ -274,24 +229,14 @@ Don't miss out on this beautiful opportunity! 🌹✨
 
 *Terms & Conditions Apply. Offer valid for limited time only.*`;
 }
-
 /**
  * Generate WhatsApp order cancellation message
  */
-export function getWhatsAppOrderCancellationTemplate(
-  orderNumber: string,
-  customerName: string,
-  total: string,
-  address: string,
-  paymentMethod: string,
-  refundAmount?: string,
-  refundMethod?: string,
-  estimatedRefundDays?: number
-): string {
-  let refundInfo = '';
-  if (refundAmount && refundMethod) {
-    const refundDays = estimatedRefundDays || 5;
-    refundInfo = `\n━━━━━━━━━━━━━━━━━━━━━━━━━
+export function getWhatsAppOrderCancellationTemplate(orderNumber, customerName, total, address, paymentMethod, refundAmount, refundMethod, estimatedRefundDays) {
+    let refundInfo = '';
+    if (refundAmount && refundMethod) {
+        const refundDays = estimatedRefundDays || 5;
+        refundInfo = `\n━━━━━━━━━━━━━━━━━━━━━━━━━
 💰 *REFUND DETAILS*
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -300,9 +245,8 @@ export function getWhatsAppOrderCancellationTemplate(
 📅 *Timeline*: ${refundDays} business days
 
 Your refund will be processed automatically and you'll receive a confirmation message once completed.`;
-  }
-
-  return `🌸 *BOUQUET BAR - ORDER CANCELLED* 🌸
+    }
+    return `🌸 *BOUQUET BAR - ORDER CANCELLED* 🌸
 
 Hi *${customerName}*! 👋
 
@@ -317,10 +261,10 @@ Hi *${customerName}*! 👋
 💳 *Payment Method*: ${paymentMethod}
 📍 *Delivery Address*: ${address}
 ⏰ *Cancelled*: ${new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  })}${refundInfo}
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+    })}${refundInfo}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 😊 *WE'RE HERE FOR YOU*
@@ -334,24 +278,16 @@ We're sorry to see you cancel your order, but we understand that plans can chang
 
 Thank you for choosing Bouquet Bar. We hope to make your next special moment beautiful! ✨`;
 }
-
 /**
  * Generate WhatsApp points awarded message
  */
-export function getWhatsAppPointsAwardedTemplate(
-  customerName: string,
-  pointsAwarded: number,
-  totalPoints: number,
-  orderNumber: string,
-  nextMilestone?: { points: number, reward: string }
-): string {
-  let milestoneInfo = '';
-  if (nextMilestone) {
-    const pointsNeeded = nextMilestone.points - totalPoints;
-    milestoneInfo = `\n🎯 *Next Milestone*: ${pointsNeeded} more points for ${nextMilestone.reward}`;
-  }
-
-  return `🌸 *BOUQUET BAR - POINTS EARNED* 🌸
+export function getWhatsAppPointsAwardedTemplate(customerName, pointsAwarded, totalPoints, orderNumber, nextMilestone) {
+    let milestoneInfo = '';
+    if (nextMilestone) {
+        const pointsNeeded = nextMilestone.points - totalPoints;
+        milestoneInfo = `\n🎯 *Next Milestone*: ${pointsNeeded} more points for ${nextMilestone.reward}`;
+    }
+    return `🌸 *BOUQUET BAR - POINTS EARNED* 🌸
 
 Hi *${customerName}*! 👋
 
@@ -384,39 +320,30 @@ Hi *${customerName}*! 👋
 
 Thank you for being a valued customer! 🌹✨`;
 }
-
 /**
  * Generate WhatsApp order tracking message
  */
-export function getWhatsAppOrderTrackingTemplate(
-  orderNumber: string,
-  customerName: string,
-  currentStatus: string,
-  estimatedDelivery?: Date,
-  trackingSteps?: Array<{step: string, completed: boolean, timestamp?: Date}>
-): string {
-  let deliveryInfo = '';
-  if (estimatedDelivery) {
-    const deliveryDate = new Date(estimatedDelivery).toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
-    deliveryInfo = `\n📅 *Expected Delivery*: ${deliveryDate}`;
-  }
-
-  let trackingInfo = '';
-  if (trackingSteps && trackingSteps.length > 0) {
-    trackingInfo = '\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📋 *ORDER PROGRESS*\n━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    trackingSteps.forEach(step => {
-      const emoji = step.completed ? '✅' : '⏳';
-      const timestamp = step.timestamp ? 
-        ` (${new Date(step.timestamp).toLocaleDateString('en-IN')})` : '';
-      trackingInfo += `${emoji} ${step.step}${timestamp}\n`;
-    });
-  }
-
-  return `🌸 *BOUQUET BAR - ORDER TRACKING* 🌸
+export function getWhatsAppOrderTrackingTemplate(orderNumber, customerName, currentStatus, estimatedDelivery, trackingSteps) {
+    let deliveryInfo = '';
+    if (estimatedDelivery) {
+        const deliveryDate = new Date(estimatedDelivery).toLocaleDateString('en-IN', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+        deliveryInfo = `\n📅 *Expected Delivery*: ${deliveryDate}`;
+    }
+    let trackingInfo = '';
+    if (trackingSteps && trackingSteps.length > 0) {
+        trackingInfo = '\n━━━━━━━━━━━━━━━━━━━━━━━━━\n📋 *ORDER PROGRESS*\n━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+        trackingSteps.forEach(step => {
+            const emoji = step.completed ? '✅' : '⏳';
+            const timestamp = step.timestamp ?
+                ` (${new Date(step.timestamp).toLocaleDateString('en-IN')})` : '';
+            trackingInfo += `${emoji} ${step.step}${timestamp}\n`;
+        });
+    }
+    return `🌸 *BOUQUET BAR - ORDER TRACKING* 🌸
 
 Hi *${customerName}*! 👋
 

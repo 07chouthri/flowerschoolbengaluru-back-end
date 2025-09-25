@@ -1,9 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
-import { registerRoutes } from "./routes";
-import { config } from './config';
-import { setupVite, serveStatic, log } from "./vite";
-import { backgroundScheduler } from "./services/background-scheduler";
+import { registerRoutes } from "./routes.js";
+import { config } from './config.js';
+// import { setupVite, serveStatic, log } from "./vite.js"; // Commented out for production build
+import { backgroundScheduler } from "./services/background-scheduler.js";
 import cors from "cors";
 
 const app = express();
@@ -45,7 +45,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
@@ -65,12 +65,12 @@ const startServer = async (server: any, retries = 3) => {
             host: "localhost",
           },
           () => {
-            log(`serving on port ${port}`);
+            console.log(`serving on port ${port}`);
             resolve(undefined);
           }
         ).on('error', (err: NodeJS.ErrnoException) => {
           if (err.code === 'EADDRINUSE' && i < retries - 1) {
-            log(`Port ${port} is in use, trying ${port + 1}`);
+            console.log(`Port ${port} is in use, trying ${port + 1}`);
             return;
           }
           reject(err);
@@ -98,18 +98,20 @@ const startServer = async (server: any, retries = 3) => {
       throw err;
     });
 
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
+    // Vite setup commented out for production build
+    // if (app.get("env") === "development") {
+    //   await setupVite(app, server);
+    // } else {
+    //   serveStatic(app);
+    // }
+    console.log("Server starting in production mode");
 
     const port = await startServer(server);
     
     // Start background scheduler for order status progression
     try {
       backgroundScheduler.start();
-      log("Background scheduler started for order status progression");
+      console.log("Background scheduler started for order status progression");
     } catch (error) {
       console.error("Failed to start background scheduler:", error);
     }

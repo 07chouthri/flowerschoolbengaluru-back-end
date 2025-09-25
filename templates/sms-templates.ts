@@ -1,4 +1,4 @@
-import { type OrderNotificationData } from "server/shared/schema";
+import { type OrderNotificationData } from "../shared/schema";
 
 /**
  * Generate SMS order confirmation message
@@ -16,7 +16,7 @@ export function getSMSOrderConfirmationTemplate(data: OrderNotificationData): st
   let itemSummary = '';
   const displayItems = data.items.slice(0, 2);
   if (displayItems.length > 0) {
-    itemSummary = displayItems.map(item => 
+    itemSummary = displayItems.map((item: any) => 
       `${item.quantity}x ${item.name}`
     ).join(', ');
     

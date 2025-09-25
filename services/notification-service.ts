@@ -1,7 +1,7 @@
 import twilio from "twilio";
-import { type Order } from "../shared/schema";
-import { MessageQueue } from "./message-queue";
-import { config } from "../config";
+import { type Order } from "../shared/schema.js";
+import { MessageQueue } from "./message-queue.js";
+import { config } from "../config.js";
 
 interface OrderNotificationData {
   orderNumber: string;
@@ -256,14 +256,6 @@ export class NotificationService {
       
       // Send WhatsApp message directly through Twilio for immediate delivery
       return await this.sendRawWhatsApp(formattedPhone, messageBody, mediaUrl);
-
-      console.log(`[WHATSAPP] Message queued successfully. Order: ${notificationData.orderNumber}, Queue ID: ${messageId}`);
-      
-      return {
-        success: true,
-        channel: 'whatsapp',
-        messageId: messageId
-      };
     } catch (error) {
       console.error(`[WHATSAPP] Failed to send WhatsApp message for order ${notificationData.orderNumber}:`, error instanceof Error ? error.message : 'Unknown WhatsApp error');
       return {

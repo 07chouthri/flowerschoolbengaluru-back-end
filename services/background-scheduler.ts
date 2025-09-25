@@ -1,8 +1,8 @@
-import { storage } from "../storage";
-import { notificationService } from "./notification-service";
-import { getSMSStatusUpdateTemplate } from "../templates/sms-templates";
-import { getWhatsAppStatusUpdateTemplate } from "../templates/whatsapp-templates";
-import { config } from "../config";
+import { storage } from "../storage.js";
+import { notificationService } from "./notification-service.js";
+import { getSMSStatusUpdateTemplate } from "../templates/sms-templates.js";
+import { getWhatsAppStatusUpdateTemplate } from "../templates/whatsapp-templates.js";
+import { config } from "../config.js";
 
 export interface OrderStatusProgression {
   currentStatus: string;
