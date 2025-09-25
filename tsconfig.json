@@ -14,6 +14,16 @@
       "@shared/": ["./shared/"]
     }
   },
+<<<<<<< HEAD
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
+=======
+  "include": [
+    "index.ts",
+    "routes.ts",
+    "/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
+>>>>>>> dbfa35d5114961b8e013aa37b5d2da8cee79d570

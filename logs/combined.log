@@ -1,0 +1,20 @@
+2025-09-25T21:17:13: [NOTIFICATION] Initializing notification service...
+2025-09-25T21:17:13: [NOTIFICATION] Initializing Twilio client...
+2025-09-25T21:17:13: [WHATSAPP] Configured with number: wha******8886
+2025-09-25T21:17:13: [NOTIFICATION] Initialized WhatsApp with number: whatsapp:+14155238886
+2025-09-25T21:17:13: Server starting in production mode
+2025-09-25T21:17:13: serving on port 5000
+2025-09-25T21:17:13: Background scheduler started for order status progression
+2025-09-25T21:28:00: Executing query: SELECT *
+            FROM bouquetbar.users
+            WHERE email = 'vasuchouthri811@gmail.com'
+              AND  password='qwedrfgh'
+            LIMIT 1
+2025-09-25T21:28:00: Query Result: []
+2025-09-25T21:28:00: POST /api/auth/signin 401 in 99ms :: {"message":"Invalid credentials. User not …
+2025-09-25T21:28:21: Executing query: 
+    SELECT *
+    FROM bouquetbar.events
+    ORDER BY 1 ASC;
+  
+2025-09-25T21:28:21: GET /api/get/events 200 in 173ms :: [{"id":"712e7127-534a-472f-a673-28887c739ce…
