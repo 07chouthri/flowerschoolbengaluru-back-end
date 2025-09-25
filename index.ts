@@ -36,7 +36,7 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = ${req.method} ${path} ${res.statusCode} in ${duration}ms;
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
@@ -65,20 +65,12 @@ const startServer = async (server: any, retries = 3) => {
             host: "localhost",
           },
           () => {
-<<<<<<< HEAD
             console.log(`serving on port ${port}`);
-=======
-            log(serving on port ${port});
->>>>>>> dbfa35d5114961b8e013aa37b5d2da8cee79d570
             resolve(undefined);
           }
         ).on('error', (err: NodeJS.ErrnoException) => {
           if (err.code === 'EADDRINUSE' && i < retries - 1) {
-<<<<<<< HEAD
             console.log(`Port ${port} is in use, trying ${port + 1}`);
-=======
-            log(Port ${port} is in use, trying ${port + 1});
->>>>>>> dbfa35d5114961b8e013aa37b5d2da8cee79d570
             return;
           }
           reject(err);
