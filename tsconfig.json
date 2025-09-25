@@ -11,19 +11,13 @@
     "rootDir": "./",
     "baseUrl": ".",
     "paths": {
-      "@shared/": ["./shared/"]
+      "@shared/*": ["./shared/*"]
     }
   },
-<<<<<<< HEAD
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"]
-}
-=======
   "include": [
     "index.ts",
     "routes.ts",
-    "/*.ts"
+    "**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
->>>>>>> dbfa35d5114961b8e013aa37b5d2da8cee79d570
