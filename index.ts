@@ -62,7 +62,7 @@ const startServer = async (server: any, retries = 3): Promise<number> => {
         server.listen(
           {
             port,
-            host: "0.0.0.0",  // Listen on all network interfaces
+            host: "0.0.0.0", // Listen on all network interfaces
           },
           () => {
             log(serving on port ${port});
