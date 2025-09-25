@@ -8,11 +8,11 @@ export const config = {
     authToken: "9b8d6ecef4bb64ed53f6d2d2d6514f7d",
     verifyServiceSid: "VA793237945fdb5873770ef0866054a4a9",
     sms: {
-      fromNumber: "+12567333181",
-      phoneNumber: "+12567333181"
+      fromNumber: "‪+12567333181‬",
+      phoneNumber: "‪+12567333181‬"
     },
     whatsapp: {
-      fromNumber: "+14155238886"
+      fromNumber: "‪+14155238886‬"
     },
     verify: {
       serviceSid: "VA793237945fdb5873770ef0866054a4a9"
@@ -21,18 +21,11 @@ export const config = {
   server: {
     port: 5000,
     cors: {
-      origins: [
-        "http://localhost:5173", 
-        "http://localhost:8080", 
-        "http://localhost:4173", 
-        "https://localhost:5000",
-        "https://flowerschoolbengaluru.com",
-        "https://app.flowerschoolbengaluru.com"
-      ]
+      origins: ["http://localhost:5173", "http://localhost:8080", "http://localhost:4173"]
     }
   },
   admin: {
-    phone: "+919042358932",
+    phone: "‪+919042358932‬",
     emails: ["admin@bouquetbar.com", "support@bouquetbar.com","vasuchouthri811@gmail.com"]
-  }
+  }
 };
