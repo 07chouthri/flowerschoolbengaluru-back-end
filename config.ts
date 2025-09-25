@@ -21,7 +21,14 @@ export const config = {
   server: {
     port: 5000,
     cors: {
-      origins: ["http://localhost:5173", "http://localhost:8080", "http://localhost:4173"]
+      origins: [
+        "http://localhost:5173", 
+        "http://localhost:8080", 
+        "http://localhost:4173",
+        "https://flowerschoolbengaluru.com",      // Add your production frontend domain here
+        "https://www.flowerschoolbengaluru.com",  // WWW version of your frontend
+        "https://app.flowerschoolbengaluru.com"   // If you use a subdomain for your frontend
+      ]
     }
   },
   admin: {
