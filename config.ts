@@ -21,7 +21,7 @@ export const config = {
   server: {
     port: 5000,
     cors: {
-      origins: ["http://localhost:5173", "http://localhost:8080", "http://localhost:4173"]
+      origins: ["http://localhost:5173", "http://localhost:8080", "http://localhost:4173", "https://flowerschoolbengaluru.com","https://app.flowerschoolbengaluru.com/"]
     }
   },
   admin: {
