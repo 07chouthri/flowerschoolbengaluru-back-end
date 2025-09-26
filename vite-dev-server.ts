@@ -3,21 +3,20 @@ import fs from "fs";
 import path from "path";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
-import vite from "vite";
 
 // Define base vite config here instead of importing
 const viteConfig = {
   plugins: [],
-  root: path.resolve(process.cwd(), "../FROUNT-END"),
+  root: path.resolve(process.cwd(), "../FROUNT-END-FLOWER"),
   base: "/",
   server: {
     middlewareMode: true,
   },
   resolve: {
     alias: {
-      '@': path.resolve(process.cwd(), "../FROUNT-END/src"),
-      '@shared': path.resolve(process.cwd(), "../FROUNT-END/shared"),
-      '@assets': path.resolve(process.cwd(), "../FROUNT-END/attached_assets"),
+      '@': path.resolve(process.cwd(), "../FROUNT-END-FLOWER/src"),
+      '@shared': path.resolve(process.cwd(), "../FROUNT-END-FLOWER/shared"),
+      '@assets': path.resolve(process.cwd(), "../FROUNT-END-FLOWER/attached_assets"),
     }
   }
 };
@@ -51,7 +50,9 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
-  const viteServer = await ViteLib.createServer({
+  // Use require to avoid module resolution issues
+  const { createServer: createViteServer } = require('vite');
+  const viteServer = await createViteServer({
     ...viteConfig,
     configFile: false,
     customLogger: {
