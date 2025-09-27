@@ -2,7 +2,7 @@
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   database: {
-    url: process.env.DATABASE_URL || "postgres://postgres:bouquetbar@localhost:5432/bouquetbar"
+    url: process.env.DATABASE_URL || "postgres://postgres:Vyshnudevi7507@localhost:5432/bouquetbar"
   },
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID || "",
