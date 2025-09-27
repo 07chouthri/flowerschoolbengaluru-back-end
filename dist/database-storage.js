@@ -86,27 +86,25 @@ export class DatabaseStorage {
             }
             const query = {
                 text: `
-          INSERT INTO bouquetbar.users (
-            email,
-            firstname,
-            lastname,
-            phone,
-            usertype,
-            password,
-            createdat,
-            updatedat
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-          RETURNING *;
-        `,
+              INSERT INTO bouquetbar.users (
+                email,
+                firstname,
+                lastname,
+                phone,
+                usertype,
+                password,
+                createdat
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING *;
+            `,
                 values: [
                     insertUser.email.trim(),
                     insertUser.firstName.trim(),
                     insertUser.lastName.trim(),
                     insertUser.phone.trim(),
-                    insertUser.password,
                     'user',
+                    insertUser.password,
                     new Date(),
-                    new Date()
                 ]
             };
             console.log('Executing query:', query);
