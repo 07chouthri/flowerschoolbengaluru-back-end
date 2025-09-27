@@ -139,27 +139,25 @@ export class DatabaseStorage implements IStorage {
 
       const query = {
         text: `
-          INSERT INTO bouquetbar.users (
-            email,
-            firstname,
-            lastname,
-            phone,
-            usertype,
-            password,
-            createdat,
-            updatedat
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-          RETURNING *;
-        `,
+              INSERT INTO bouquetbar.users (
+                email,
+                firstname,
+                lastname,
+                phone,
+                usertype,
+                password,
+                createdat
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING *;
+            `,
         values: [
           insertUser.email.trim(),
           insertUser.firstName.trim(),
           insertUser.lastName.trim(),
           insertUser.phone.trim(),
-          insertUser.password,
           'user',
+          insertUser.password,
           new Date(),
-          new Date()
         ]
       };
 
@@ -369,11 +367,11 @@ export class DatabaseStorage implements IStorage {
         values.push(inStockValue);
         valueCount++;
       }
-      
+
       // Always update the updated_at field
       updateFields.push(`updatedate = NOW()`);
       values.push(id);
-      
+
       const query = `
         UPDATE bouquetbar.products
         SET ${updateFields.join(', ')}
@@ -383,7 +381,7 @@ export class DatabaseStorage implements IStorage {
 
       console.log('Executing update query:', query);
       const result = await db.query(query, values);
-      
+
       if (!result.rows[0]) {
         throw new Error(`Product with id ${id} not found`);
       }
@@ -429,7 +427,7 @@ export class DatabaseStorage implements IStorage {
           productData.price,
           productData.category,
           productData.stockQuantity,
-           true, // instock based on stock quantity
+          true, // instock based on stock quantity
           productData.featured || false,
           productData.image || null,
           productData.imagefirst || null,
@@ -471,7 +469,7 @@ export class DatabaseStorage implements IStorage {
 
       console.log('Executing delete query:', query.text);
       const result = await db.query(query.text, query.values);
-      
+
       if (result.rowCount === 0) {
         throw new Error('Product could not be deleted');
       }
@@ -982,12 +980,12 @@ export class DatabaseStorage implements IStorage {
         errors.push(`Product ID is required`);
         continue;
       }
-      
+
       if (!item.quantity || item.quantity <= 0) {
         errors.push(`Valid quantity is required`);
         continue;
       }
-      
+
       if (!item.unitPrice || item.unitPrice <= 0) {
         errors.push(`Valid unit price is required`);
         continue;
@@ -1227,11 +1225,11 @@ export class DatabaseStorage implements IStorage {
           WHERE id = '${orderId}' AND userid = '${userId}'
           LIMIT 1;
         `);
-        
+
         if (!orderCheck.rows.length) {
           throw new Error("Order not found or access denied");
         }
-        
+
         const order = orderCheck.rows[0];
         if (order.status === 'delivered' || order.status === 'cancelled') {
           throw new Error(`Order cannot be cancelled as it is already ${order.status}`);
@@ -1247,11 +1245,11 @@ export class DatabaseStorage implements IStorage {
         RETURNING *;
       `;
       const result = await db.query(query);
-      
+
       if (!result.rows[0]) {
         throw new Error("Order not found");
       }
-      
+
       await this.addOrderStatusHistory(orderId, "cancelled", "Order cancelled");
       return result.rows[0];
     } catch (error) {
@@ -1963,7 +1961,7 @@ export class DatabaseStorage implements IStorage {
       if (updates.country) updateFields.push(`country = '${updates.country}'`);
       if (updates.addressType) updateFields.push(`addresstype = '${updates.addressType}'`);
       if (updates.isDefault !== undefined) updateFields.push(`isdefault = ${updates.isDefault}`);
-      
+
       updateFields.push(`updatedat = NOW()`);
 
       const query = `
@@ -1972,7 +1970,7 @@ export class DatabaseStorage implements IStorage {
         WHERE id = '${id}' AND isactive = true
         RETURNING *;
       `;
-      
+
       const result = await db.query(query);
       if (!result.rows[0]) {
         throw new Error(`Address with id ${id} not found`);
@@ -2058,16 +2056,16 @@ export class DatabaseStorage implements IStorage {
     transactionId?: string;
   }): Promise<any> {
     try {
-        // First verify if the event exists
-        const checkEventQuery = 'SELECT id FROM bouquetbar.events WHERE id = $1';
-        const eventResult = await db.query(checkEventQuery, [enrollment.eventId]);
-        
-        if (eventResult.rows.length === 0) {
-            throw new Error('Event not found');
-        }
+      // First verify if the event exists
+      const checkEventQuery = 'SELECT id FROM bouquetbar.events WHERE id = $1';
+      const eventResult = await db.query(checkEventQuery, [enrollment.eventId]);
 
-        // Insert the enrollment
-        const query = `
+      if (eventResult.rows.length === 0) {
+        throw new Error('Event not found');
+      }
+
+      // Insert the enrollment
+      const query = `
             INSERT INTO bouquetbar.events_enrollments (
                 event_id,
                 first_name,
@@ -2083,31 +2081,31 @@ export class DatabaseStorage implements IStorage {
                 $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()
             ) RETURNING *
         `;
-        const values = [
-            enrollment.eventId,
-            enrollment.firstName,
-            enrollment.lastName,
-            enrollment.email,
-            enrollment.phone,
-            enrollment.paymentMethod === 'online' ? 'completed' : 'pending',
-            enrollment.paymentAmount,
-            enrollment.transactionId || null
-        ];
+      const values = [
+        enrollment.eventId,
+        enrollment.firstName,
+        enrollment.lastName,
+        enrollment.email,
+        enrollment.phone,
+        enrollment.paymentMethod === 'online' ? 'completed' : 'pending',
+        enrollment.paymentAmount,
+        enrollment.transactionId || null
+      ];
 
-        console.log('Executing enrollment query with values:', values);
-        const result = await db.query(query, values);
+      console.log('Executing enrollment query with values:', values);
+      const result = await db.query(query, values);
       console.log('Insert Result:', result.rows);
       return result.rows[0];
     } catch (error) {
-        console.error('Error in addEventEnrollment:', error);
-        throw error;
+      console.error('Error in addEventEnrollment:', error);
+      throw error;
     }
   }
 
 
 
 
-   async updateOrderStatus(id: string, status: string): Promise<Order> {
+  async updateOrderStatus(id: string, status: string): Promise<Order> {
     try {
       await db.query('BEGIN');
       try {
@@ -2165,7 +2163,7 @@ export class DatabaseStorage implements IStorage {
   }
 
 
-    async AdminClasses(): Promise<any[]> {
+  async AdminClasses(): Promise<any[]> {
     const query = `
         SELECT 
           id,
@@ -2187,7 +2185,7 @@ export class DatabaseStorage implements IStorage {
     return result.rows;
   }
 
-   async AddAdminClasses(classData: any): Promise<any> {
+  async AddAdminClasses(classData: any): Promise<any> {
     try {
       const {
         title,
