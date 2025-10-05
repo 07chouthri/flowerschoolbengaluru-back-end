@@ -60,6 +60,7 @@ export class NotificationService {
     // Check if Twilio credentials are properly configured
     const accountSid = config.twilio.accountSid;
     const authToken = config.twilio.authToken;
+    console.log('[NOTIFICATION] Twilio Config:',config )
 
     if (!accountSid || !authToken || !accountSid.startsWith('AC')) {
       console.error('[NOTIFICATION] Twilio credentials missing or invalid:', {

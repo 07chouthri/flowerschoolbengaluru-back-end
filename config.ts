@@ -1,22 +1,23 @@
-// config.ts
+import dotenv from "dotenv";
+dotenv.config();
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   database: {
     url: process.env.DATABASE_URL || "postgres://postgres:Vyshnudevi7507@localhost:5432/bouquetbar"
   },
   twilio: {
-    accountSid: process.env.TWILIO_ACCOUNT_SID || "AC33481cb2b9a8c5cd0e7ebfa5e7ef41be",
-    authToken: process.env.TWILIO_AUTH_TOKEN || "03d1c6447ba02b010d89815819c5fe7e",
-    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "VAb363f196c6b6bf4367dcac40bce2704b",
+    accountSid:process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID,
     sms: {
-      fromNumber: process.env.TWILIO_PHONE_NUMBER || "+18633431421",
-      phoneNumber: process.env.TWILIO_PHONE_NUMBER || ""
+      fromNumber: process.env.TWILIO_PHONE_NUMBER,
+      phoneNumber: process.env.TWILIO_PHONE_NUMBER
     },
     whatsapp: {
-      fromNumber: process.env.TWILIO_WHATSAPP_NUMBER || "+18633431421"
+      fromNumber: process.env.TWILIO_WHATSAPP_NUMBER
     },
     verify: {
-      serviceSid: process.env.TWILIO_VERIFY_SERVICE_SID || "VAb363f196c6b6bf4367dcac40bce2704b"
+      serviceSid: process.env.TWILIO_VERIFY_SERVICE_SID
     }
   },
   server: {
