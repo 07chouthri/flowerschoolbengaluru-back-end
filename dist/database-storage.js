@@ -2601,11 +2601,6 @@ ORDER BY B.createdat DESC; `;
             if (eventCheck.rows.length === 0) {
                 throw new Error('Event not found');
             }
-            // Check if there are any enrollments for this event
-            const enrollmentCheck = await db.query('SELECT id FROM bouquetbar.events_enrollments WHERE event_id = $1', [id]);
-            if (enrollmentCheck.rows.length > 0) {
-                throw new Error('Cannot delete event with existing enrollments. Please remove enrollments first.');
-            }
             const query = `
         UPDATE bouquetbar.events
         SET isactive = false
