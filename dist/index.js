@@ -2,10 +2,17 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes.js";
 import { config } from './config.js';
-// import { setupVite, serveStatic, log } from "./vite-setup.js"; // Commented out for production build
 import { backgroundScheduler } from "./services/background-scheduler.js";
 import cors from "cors";
+import multer from "multer";
+import fileUpload from "express-fileupload";
 const app = express();
+// Increase body size limits for JSON and URL-encoded payloads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+// Enable file upload middlewares (choose one or both as needed)
+app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } })); // 50MB
+app.use(multer({ limits: { fileSize: 50 * 1024 * 1024 } }).any());
 // Configure CORS
 app.use(cors({
     origin: config.server.cors.origins,
@@ -13,8 +20,6 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use((req, res, next) => {
     const start = Date.now();

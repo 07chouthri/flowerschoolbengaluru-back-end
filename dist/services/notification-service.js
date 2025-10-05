@@ -1,7 +1,6 @@
 import twilio from "twilio";
 import { MessageQueue } from "./message-queue.js";
 import { config } from "../config.js";
-import { getSMSOrderConfirmationTemplate } from "../templates/sms-templates.js";
 import { getWhatsAppOrderConfirmationTemplate } from "../templates/whatsapp-templates.js";
 export class NotificationService {
     /**
@@ -162,9 +161,23 @@ export class NotificationService {
                     error: 'SMS notifications not configured'
                 };
             }
-            const messageBody = getSMSOrderConfirmationTemplate(notificationData);
+            // Use the new template as requested by the user
+            // Template:
+            // Thank you for choosing Bouquet Bar, Bengaluru.
+            // Dear {customerName}, your order #{orderNumber} has been successfully placed, with a total amount of ₹{totalAmount}.
+            // We appreciate your business and look forward to serving you again.
+            // Ensure correct data mapping
+            const orderNumber = notificationData.orderNumber || '';
+            const customerName = notificationData.customerName || '';
+            // Remove any currency symbol from total if present, then add ₹
+            let totalAmount = notificationData.total;
+            if (typeof totalAmount === 'string') {
+                totalAmount = totalAmount.replace(/[^\d.]/g, '');
+            }
+            totalAmount = `₹${Number(totalAmount).toLocaleString('en-IN')}`;
+            const messageBody = `Thank you for choosing Bouquet Bar, Bengaluru.\n\nDear ${customerName}, your order #${orderNumber} has been successfully placed, with a total amount of ${totalAmount}.\n\nWe appreciate your business and look forward to serving you again.`;
             const formattedPhone = notificationData.phone.startsWith('+') ? notificationData.phone : `+${notificationData.phone}`;
-            console.log(`[SMS] Queueing order confirmation to ${this.maskPhoneNumber(notificationData.phone)} for order ${notificationData.orderNumber}`);
+            console.log(`[SMS] Queueing order confirmation to ${this.maskPhoneNumber(notificationData.phone)} for order ${orderNumber}`);
             // Add message to queue instead of sending directly
             const messageId = await this.messageQueue.enqueue(formattedPhone, messageBody, 'sms');
             console.log(`[SMS] Message queued successfully. Order: ${notificationData.orderNumber}, Queue ID: ${messageId}`);
@@ -228,7 +241,7 @@ export class NotificationService {
                 notificationData: null
             };
         }
-        console.log(`[NOTIFICATION] Sending order confirmation for ${order.orderNumber} to ${this.maskPhoneNumber(notificationData.phone)}`);
+        console.log(`[NOTIFICATION] Sending order confirmation for ${order} to ${this.maskPhoneNumber(notificationData.phone)}`);
         // Send both SMS and WhatsApp in parallel for better performance
         const [smsResult, whatsappResult] = await Promise.all([
             this.sendSMS(notificationData),

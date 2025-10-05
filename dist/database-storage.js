@@ -31,6 +31,7 @@ export class DatabaseStorage {
             FROM bouquetbar.users
             WHERE email = '${email}'
               AND  password='${password}'
+              AND isactive=true
             LIMIT 1`;
         console.log('Executing query:', query);
         const result = await db.query(query);
@@ -157,13 +158,18 @@ export class DatabaseStorage {
     }
     async updateUserProfile(id, profile) {
         try {
+            console.log("Updating user profile with data:", profile);
             const updates = [];
             if (profile.email)
                 updates.push(`email = '${profile.email}'`);
-            if (profile.firstName)
-                updates.push(`firstname = '${profile.firstName}'`);
-            if (profile.lastName)
-                updates.push(`lastname = '${profile.lastName}'`);
+            // Handle both firstName/firstname variations
+            const firstName = profile.firstName || profile.firstname;
+            if (firstName)
+                updates.push(`firstname = '${firstName}'`);
+            // Handle both lastName/lastname variations
+            const lastName = profile.lastName || profile.lastname;
+            if (lastName)
+                updates.push(`lastname = '${lastName}'`);
             if (profile.phone)
                 updates.push(`phone = '${profile.phone}'`);
             if (profile.password)
@@ -182,17 +188,15 @@ export class DatabaseStorage {
                 updates.push(`state = '${profile.state}'`);
             if (profile.points !== undefined)
                 updates.push(`points = ${profile.points}`);
-            // Always update "updated_at"
             updates.push(`updatedat = NOW()`);
-            if (updates.length === 1) { // Only updatedAt field
+            if (updates.length === 1) {
                 throw new Error("No fields provided for update.");
             }
             const updateQuery = `
-      UPDATE bouquetbar.users
-      SET ${updates.join(", ")}
-      WHERE id = '${id}'
-      RETURNING *;
-    `;
+          UPDATE bouquetbar.users
+          SET ${updates.join(", ")}
+          WHERE id = '${id}'
+          RETURNING *;`;
             console.log("Executing update query:", updateQuery);
             const result = await db.query(updateQuery);
             if (!result.rows || result.rows.length === 0) {
@@ -207,9 +211,9 @@ export class DatabaseStorage {
     }
     async deleteUser(id) {
         const query = `
-    DELETE FROM bouquetbar.users
-    WHERE id = '${id}';
-  `;
+    UPDATE bouquetbar.users
+    SET isactive = false
+    WHERE id = '${id}';`;
         console.log('Executing query:', query);
         await db.query(query);
         console.log('User deleted successfully');
@@ -245,18 +249,242 @@ export class DatabaseStorage {
     }
     async getProductsByCategoryAndSubcategory(category, subcategory) {
         let query = `
-      SELECT *
-      FROM bouquetbar.products
-      --WHERE category = '${category}'
-    `;
-        // if (subcategory) {
-        //   query += ` AND subcategory = '${subcategory}'`;
-        // }
-        // query += ' ORDER BY createdat DESC;';
+       SELECT *
+FROM bouquetbar.products
+WHERE (category ILIKE '%${category}%' OR category ILIKE '%${subcategory}%')
+  AND "inStock" = true
+ORDER BY createdat DESC;
+      `;
         console.log('Executing query:', query);
         const result = await db.query(query);
         console.log('Query Result:', result.rows);
         return result.rows;
+    }
+    async getStudents() {
+        try {
+            const query = `
+      SELECT DISTINCT first_name AS name, email, 'Event Students' AS source
+      FROM bouquetbar.events_enrollments
+      UNION ALL
+      SELECT DISTINCT fullname AS name, email, 'Call Students' AS source
+      FROM bouquetbar.enrollments
+      ORDER BY name DESC;
+    `;
+            console.log('Executing query:', query);
+            const result = await db.query(query);
+            console.log('Query Result:', result.rows);
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error fetching students:', error);
+            throw new Error(`Failed to fetch students: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    // Instructor Management Methods
+    async getAllInstructors() {
+        try {
+            const query = `
+        SELECT 
+          id,
+          name,
+          email,
+          phone,
+          specialization,
+          experience_years,
+          bio,
+          profile_image,
+          hourly_rate,
+          availability,
+          is_active,
+          created_at,
+          updated_at
+        FROM bouquetbar.instructors
+        ORDER BY created_at DESC
+      `;
+            console.log('Executing query:', query);
+            const result = await db.query(query);
+            console.log('Query Result:', result.rows.length, 'instructors found');
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error fetching instructors:', error);
+            throw new Error(`Failed to fetch instructors: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getInstructor(id) {
+        try {
+            const query = `
+        SELECT 
+          id,
+          name,
+          email,
+          phone,
+          specialization,
+          experience_years,
+          bio,
+          profile_image,
+          hourly_rate,
+          availability,
+          is_active,
+          created_at,
+          updated_at
+        FROM bouquetbar.instructors
+        WHERE id = $1
+      `;
+            console.log('Executing query:', query, 'with id:', id);
+            const result = await db.query(query, [id]);
+            console.log('Query Result:', result.rows.length, 'instructor found');
+            return result.rows[0] || null;
+        }
+        catch (error) {
+            console.error('Error fetching instructor:', error);
+            throw new Error(`Failed to fetch instructor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async createInstructor(instructorData) {
+        try {
+            const { name, email, phone, specialization, experience_years, bio, profile_image, hourly_rate, availability, is_active } = instructorData;
+            const query = `
+        INSERT INTO bouquetbar.instructors (
+          name, email, phone, specialization, experience_years, 
+          bio, profile_image, hourly_rate, availability, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `;
+            const values = [
+                name,
+                email,
+                phone || null,
+                specialization || null,
+                experience_years || 0,
+                bio || null,
+                profile_image || null,
+                hourly_rate || 0.00,
+                availability ? JSON.stringify(availability) : '[]',
+                is_active !== undefined ? is_active : true
+            ];
+            console.log('Executing query:', query);
+            console.log('With values:', values);
+            const result = await db.query(query, values);
+            console.log('Query Result:', result.rows[0]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error creating instructor:', error);
+            if (error instanceof Error && error.message.includes('duplicate key')) {
+                throw new Error('Email already exists');
+            }
+            throw new Error(`Failed to create instructor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async updateInstructor(id, updates) {
+        try {
+            const allowedFields = [
+                'name', 'email', 'phone', 'specialization', 'experience_years',
+                'bio', 'profile_image', 'hourly_rate', 'availability', 'is_active'
+            ];
+            const updateFields = [];
+            const values = [];
+            let paramCount = 1;
+            Object.keys(updates).forEach(key => {
+                if (allowedFields.includes(key) && updates[key] !== undefined) {
+                    if (key === 'availability' && typeof updates[key] === 'object') {
+                        updateFields.push(`${key} = $${paramCount}`);
+                        values.push(JSON.stringify(updates[key]));
+                    }
+                    else {
+                        updateFields.push(`${key} = $${paramCount}`);
+                        values.push(updates[key]);
+                    }
+                    paramCount++;
+                }
+            });
+            if (updateFields.length === 0) {
+                throw new Error('No valid fields to update');
+            }
+            // Add updated_at timestamp
+            updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+            const query = `
+        UPDATE bouquetbar.instructors 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramCount}
+        RETURNING *
+      `;
+            values.push(id);
+            console.log('Executing query:', query);
+            console.log('With values:', values);
+            const result = await db.query(query, values);
+            if (result.rows.length === 0) {
+                throw new Error('Instructor not found');
+            }
+            console.log('Query Result:', result.rows[0]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error updating instructor:', error);
+            if (error instanceof Error && error.message.includes('duplicate key')) {
+                throw new Error('Email already exists');
+            }
+            throw new Error(`Failed to update instructor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async deleteInstructor(id) {
+        try {
+            const query = `DELETE FROM bouquetbar.instructors WHERE id = $1 RETURNING *`;
+            console.log('Executing query:', query, 'with id:', id);
+            const result = await db.query(query, [id]);
+            if (result.rows.length === 0) {
+                throw new Error('Instructor not found');
+            }
+            console.log('Instructor deleted successfully:', result.rows[0].name);
+        }
+        catch (error) {
+            console.error('Error deleting instructor:', error);
+            if (error instanceof Error && error.message.includes('foreign key constraint')) {
+                throw new Error('Cannot delete instructor with associated classes or bookings');
+            }
+            throw new Error(`Failed to delete instructor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getInstructorsBySpecialization(specialization) {
+        try {
+            const query = `
+        SELECT 
+          id, name, email, phone, specialization, experience_years,
+          bio, profile_image, hourly_rate, availability, is_active
+        FROM bouquetbar.instructors
+        WHERE specialization ILIKE $1 AND is_active = true
+        ORDER BY experience_years DESC, name ASC
+      `;
+            console.log('Executing query:', query, 'with specialization:', specialization);
+            const result = await db.query(query, [`%${specialization}%`]);
+            console.log('Query Result:', result.rows.length, 'instructors found');
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error fetching instructors by specialization:', error);
+            throw new Error(`Failed to fetch instructors by specialization: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getActiveInstructors() {
+        try {
+            const query = `
+        SELECT 
+          id, name, email, phone, specialization, experience_years,
+          bio, profile_image, hourly_rate, availability
+        FROM bouquetbar.instructors
+        WHERE is_active = true
+        ORDER BY name ASC
+      `;
+            console.log('Executing query:', query);
+            const result = await db.query(query);
+            console.log('Query Result:', result.rows.length, 'active instructors found');
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error fetching active instructors:', error);
+            throw new Error(`Failed to fetch active instructors: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
     async getProductsByCategory(category) {
         const query = `
@@ -264,6 +492,126 @@ export class DatabaseStorage {
     FROM bouquetbar.products
     WHERE category = '${category}';
   `;
+        console.log('Executing query:', query);
+        const result = await db.query(query);
+        console.log('Query Result:', result.rows);
+        return result.rows;
+    }
+    async getDashboardData() {
+        try {
+            const query = `
+      SELECT
+        (SELECT COALESCE(SUM(total), 0) FROM bouquetbar.orders) AS grand_total_orders,
+        (SELECT COUNT(*) FROM bouquetbar.orders) AS total_orders,
+        (SELECT COUNT(*) FROM bouquetbar.products) AS total_products,
+        (SELECT COALESCE(MAX(rating), 0) FROM bouquetbar.student_feedback) AS max_feedback_rating,
+        (SELECT COUNT(DISTINCT fullname) FROM bouquetbar.enrollments) AS total_unique_enrollments,
+        (SELECT COUNT(*) 
+          FROM bouquetbar.enrollments
+          WHERE batch IS NOT NULL
+            AND (
+              CASE
+                WHEN batch ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN batch::date
+                ELSE TO_DATE(batch || ' 01', 'FMMonth YYYY DD')
+              END
+            ) <= NOW()
+        ) AS total_completed_batches,
+        (SELECT COALESCE(JSON_AGG(usermailid ORDER BY createdate DESC), '[]'::json)
+          FROM (
+            SELECT DISTINCT usermailid, createdate
+            FROM bouquetbar.subscribe
+            ORDER BY createdate DESC
+          ) AS sub
+        ) AS subscriber_emails;
+    `;
+            console.log('Executing dashboard query:', query);
+            const result = await db.query(query);
+            console.log('Dashboard query result:', result.rows);
+            if (result.rows && result.rows.length > 0) {
+                return result.rows[0];
+            }
+            else {
+                // Return default values if no data found
+                return {
+                    grand_total_orders: 0,
+                    total_orders: 0,
+                    total_products: 0,
+                    max_feedback_rating: 0,
+                    total_unique_enrollments: 0,
+                    total_completed_batches: 0,
+                    subscriber_emails: []
+                };
+            }
+        }
+        catch (error) {
+            console.error('Error in getDashboardData:', error);
+            // Return safe default values instead of throwing error
+            return {
+                grand_total_orders: 0,
+                total_orders: 0,
+                total_products: 0,
+                max_feedback_rating: 0,
+                total_unique_enrollments: 0,
+                total_completed_batches: 0,
+                subscriber_emails: []
+            };
+        }
+    }
+    async getEventClassEnrollments() {
+        const query = `SELECT 
+    'Enrollments' AS source,
+    fullname AS name,
+    email,
+    phone,
+    batch,
+    questions AS status_question,
+    createdat AS enrolled_date
+FROM bouquetbar.enrollments
+UNION ALL
+SELECT 
+    'Event Enrollments' AS source,
+    first_name AS name,
+    email,
+    phone,
+    NULL AS batch,
+    NULL AS status_question,
+    enrolled_at AS enrolled_date
+  FROM bouquetbar.events_enrollments
+  WHERE isactive = true
+  ORDER BY source, enrolled_date DESC;
+  `;
+        console.log('Executing query:', query);
+        const result = await db.query(query);
+        console.log('Query Result:', result.rows);
+        return result.rows;
+    }
+    async getEventEnrollments() {
+        const query = `SELECT 
+    B.email,
+    A.title AS event_title,
+    A.event_date
+FROM bouquetbar.events AS A
+JOIN bouquetbar.events_enrollments AS B ON A.id = B.event_id
+WHERE A.isactive = true
+ORDER BY B.enrolled_at DESC;`;
+        console.log('Executing query:', query);
+        const result = await db.query(query);
+        console.log('Query Result:', result.rows);
+        return result.rows;
+    }
+    async getclassEnrollments() {
+        const query = `
+SELECT 
+    B.fullname AS name,
+    B.email,
+    B.phone,
+    B.batch,
+    B.questions AS status_question,
+    A.title AS course_title
+FROM bouquetbar.courses AS A
+JOIN bouquetbar.enrollments AS B ON A.id = B.courseid
+WHERE A.isactive = true
+ORDER BY B.createdat DESC; `;
         console.log('Executing query:', query);
         const result = await db.query(query);
         console.log('Query Result:', result.rows);
@@ -292,31 +640,102 @@ export class DatabaseStorage {
             const updateFields = [];
             const values = [];
             let valueCount = 1;
+            // Handle name field
+            if (updates.name !== undefined) {
+                updateFields.push(`name = $${valueCount}`);
+                values.push(updates.name);
+                valueCount++;
+            }
+            // Handle description field
+            if (updates.description !== undefined) {
+                updateFields.push(`description = $${valueCount}`);
+                values.push(updates.description);
+                valueCount++;
+            }
+            // Handle price field
+            if (updates.price !== undefined) {
+                updateFields.push(`price = $${valueCount}`);
+                values.push(typeof updates.price === 'string' ? parseFloat(updates.price) : updates.price);
+                valueCount++;
+            }
+            // Handle category field
+            if (updates.category !== undefined) {
+                updateFields.push(`category = $${valueCount}`);
+                values.push(updates.category);
+                valueCount++;
+            }
             // Handle stockquantity field
             const stockQty = updates.stockQuantity ?? updates.stockquantity;
             if (stockQty !== undefined) {
                 updateFields.push(`stockquantity = $${valueCount}`);
-                // Convert to number if it's a string
                 values.push(typeof stockQty === 'string' ? parseInt(stockQty) : stockQty);
                 valueCount++;
             }
-            // Handle inStock field
+            // Handle inStock field - FIXED: Use correct property name
             const inStockValue = updates.inStock ?? updates.instock;
             if (inStockValue !== undefined) {
                 updateFields.push(`"inStock" = $${valueCount}`);
                 values.push(inStockValue);
                 valueCount++;
             }
+            // Handle featured field
+            if (updates.featured !== undefined) {
+                updateFields.push(`featured = $${valueCount}`);
+                values.push(updates.featured);
+                valueCount++;
+            }
+            // Handle subcategory field - FIXED: Check if property exists before using
+            if (updates.subcategory !== undefined) {
+                updateFields.push(`subcategory = $${valueCount}`);
+                values.push(updates.subcategory);
+                valueCount++;
+            }
+            // Handle image fields
+            if (updates.image !== undefined) {
+                updateFields.push(`image = $${valueCount}`);
+                values.push(updates.image);
+                valueCount++;
+            }
+            if (updates.imagefirst !== undefined) {
+                updateFields.push(`imagefirst = $${valueCount}`);
+                values.push(updates.imagefirst);
+                valueCount++;
+            }
+            if (updates.imagesecond !== undefined) {
+                updateFields.push(`imagesecond = $${valueCount}`);
+                values.push(updates.imagesecond);
+                valueCount++;
+            }
+            if (updates.imagethirder !== undefined) {
+                updateFields.push(`imagethirder = $${valueCount}`);
+                values.push(updates.imagethirder);
+                valueCount++;
+            }
+            if (updates.imagefoure !== undefined) {
+                updateFields.push(`imagefoure = $${valueCount}`);
+                values.push(updates.imagefoure);
+                valueCount++;
+            }
+            if (updates.imagefive !== undefined) {
+                updateFields.push(`imagefive = $${valueCount}`);
+                values.push(updates.imagefive);
+                valueCount++;
+            }
+            // Check if any fields to update
+            if (updateFields.length === 0) {
+                throw new Error('No valid fields provided for update');
+            }
             // Always update the updated_at field
             updateFields.push(`updatedate = NOW()`);
             values.push(id);
             const query = `
-        UPDATE bouquetbar.products
-        SET ${updateFields.join(', ')}
-        WHERE id = $${valueCount}
-        RETURNING *;
-      `;
+      UPDATE bouquetbar.products
+      SET ${updateFields.join(', ')}
+      WHERE id = $${valueCount}
+      RETURNING *;
+    `;
             console.log('Executing update query:', query);
+            console.log('With values:', values);
             const result = await db.query(query, values);
             if (!result.rows[0]) {
                 throw new Error(`Product with id ${id} not found`);
@@ -331,43 +750,40 @@ export class DatabaseStorage {
     async createProduct(productData) {
         try {
             // Validate stock quantity
-            const stockQuantity = parseInt(productData.stockquantity?.toString() || '0');
+            const stockQuantity = parseInt(productData.stockQuantity?.toString() || '0');
             if (isNaN(stockQuantity) || stockQuantity < 0) {
                 throw new Error('Invalid stock quantity. Must be a non-negative number.');
             }
-            // Log the incoming data (without the actual base64 data)
-            console.log("Creating product with data:", {
-                ...productData,
-                stockquantity: stockQuantity,
-                image: productData.image ? "[base64_data]" : null,
-                imagefirst: productData.imagefirst ? "[base64_data]" : null,
-                imagesecond: productData.imagesecond ? "[base64_data]" : null,
-                imagethirder: productData.imagethirder ? "[base64_data]" : null
+            console.log("Creating product:", {
+                name: productData.name,
+                category: productData.category,
+                price: productData.price,
+                stockQuantity: stockQuantity
             });
             const query = {
                 text: `
-          INSERT INTO bouquetbar.products (
-            name, description, price, category, stockquantity, 
-            "inStock", featured, image, imagefirst, imagesecond, 
-            imagethirder, imagefoure, imagefive
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          RETURNING *;
-        `,
+        INSERT INTO bouquetbar.products (
+          name, description, price, category, stockquantity, 
+          "inStock", featured, image, imagefirst, imagesecond, 
+          imagethirder, imagefoure, imagefive, createdat
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+        RETURNING *;
+      `,
                 values: [
                     productData.name,
                     productData.description,
                     productData.price,
                     productData.category,
-                    productData.stockQuantity,
-                    true, // instock based on stock quantity
+                    stockQuantity.toString(),
+                    stockQuantity > 0,
                     productData.featured || false,
                     productData.image || null,
-                    productData.imagefirst || null,
-                    productData.imagesecond || null,
-                    productData.imagethirder || null,
-                    null, // imagefoure
-                    null // imagefive
+                    null, // imagefirst - will be updated later
+                    null, // imagesecond - will be updated later  
+                    null, // imagethirder - will be updated later
+                    null, // imagefoure - will be updated later
+                    null // imagefive - will be updated later
                 ]
             };
             const result = await db.query(query.text, query.values);
@@ -414,7 +830,7 @@ export class DatabaseStorage {
     UPDATE bouquetbar.products
     SET 
       stockquantity = stockquantity + ${quantityChange},
-      inStock = (stockquantity + ${quantityChange} > 0),
+      "inStock" = (stockquantity + ${quantityChange} > 0),
       updated_at = NOW()
     WHERE id = '${productId}'
     RETURNING *;
@@ -446,7 +862,8 @@ export class DatabaseStorage {
     async getAllCourses() {
         const query = `
     SELECT *
-    FROM bouquetbar.courses;
+    FROM bouquetbar.courses
+    WHERE isactive = true;
   `;
         console.log('Executing query:', query);
         const result = await db.query(query);
@@ -458,6 +875,7 @@ export class DatabaseStorage {
     SELECT *
     FROM bouquetbar.courses
     WHERE id = '${id}'
+    AND isactive = true
     LIMIT 1;
   `;
         console.log('Executing query:', query);
@@ -788,11 +1206,18 @@ export class DatabaseStorage {
     }
     // Order Status Methods
     async getUserOrders(userId) {
-        const query = `
-    SELECT *
-    FROM bouquetbar.orders
-    WHERE userid = '${userId}';
-  `;
+        const query = `SELECT 
+          o.ordernumber,
+          oi.item->>'quantity' AS quantity,
+          o.status,
+          o.total,
+          o.deliveryaddress,
+          p.image,
+          o.*
+      FROM bouquetbar.orders o
+      JOIN LATERAL jsonb_array_elements(o.items) AS oi(item) ON true
+      JOIN bouquetbar.products p ON p.id = oi.item->>'productId'
+      WHERE o.userid = '${userId}'`;
         const result = await db.query(query);
         return result.rows;
     }
@@ -805,6 +1230,213 @@ export class DatabaseStorage {
   `;
         const result = await db.query(query);
         return result.rows[0] || undefined;
+    }
+    // ...existing code...
+    // Add these methods to your DatabaseStorage class
+    async addStudentFeedback(feedback) {
+        try {
+            const query = `
+      INSERT INTO bouquetbar.student_feedback(
+        student_name, 
+        course_name, 
+        feedback_text, 
+        rating,
+        submitted_at
+      )
+      VALUES ($1, $2, $3, $4, NOW())
+      RETURNING *;
+    `;
+            const values = [
+                feedback.student_name,
+                feedback.course_name,
+                feedback.feedback_text,
+                feedback.rating
+            ];
+            console.log('Executing student feedback insert query:', query);
+            console.log('Values:', values);
+            const result = await db.query(query, values);
+            console.log('Student feedback added successfully:', result.rows[0]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error in addStudentFeedback:', error);
+            throw new Error(`Failed to add student feedback: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getAllFeedback() {
+        try {
+            const query = `
+      SELECT 
+      id,
+        student_name, 
+        course_name, 
+        feedback_text, 
+        rating
+      FROM bouquetbar.student_feedback
+      ORDER BY 1 DESC;
+    `;
+            console.log('Executing student feedback query:', query);
+            const result = await db.query(query);
+            console.log('Student feedback Query Result:', result.rows);
+            return result.rows || [];
+        }
+        catch (error) {
+            console.error('Error in getAllStudentFeedback:', error);
+            throw new Error(`Failed to get student feedback: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async deleteStudentFeedback(id) {
+        try {
+            const query = `
+      DELETE FROM bouquetbar.student_feedback
+      WHERE id = $1
+      RETURNING id;
+    `;
+            console.log('Executing delete student feedback query:', query);
+            const result = await db.query(query, [id]);
+            if (result.rowCount === 0) {
+                throw new Error('Student feedback not found');
+            }
+            console.log('Student feedback deleted successfully');
+        }
+        catch (error) {
+            console.error('Error in deleteStudentFeedback:', error);
+            throw new Error(`Failed to delete student feedback: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    // ...existing code...
+    // Office Timing Methods
+    async getOfficeTimings() {
+        try {
+            const query = `
+      SELECT 
+        id,
+        office_day,
+        open_time,
+        close_time,
+        is_holiday
+      FROM bouquetbar.office_timing
+      ORDER BY 
+        CASE office_day
+          WHEN 'Monday' THEN 1
+          WHEN 'Tuesday' THEN 2
+          WHEN 'Wednesday' THEN 3
+          WHEN 'Thursday' THEN 4
+          WHEN 'Friday' THEN 5
+          WHEN 'Saturday' THEN 6
+          WHEN 'Sunday' THEN 7
+        END;
+    `;
+            console.log('Executing office timing query:', query);
+            const result = await db.query(query);
+            return result.rows || [];
+        }
+        catch (error) {
+            console.error('Error in getOfficeTimings:', error);
+            throw new Error(`Failed to get office timings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async createOfficeTiming(timing) {
+        try {
+            // Check if timing already exists for this day
+            const checkQuery = `
+      SELECT id FROM bouquetbar.office_timing 
+      WHERE office_day = $1;
+    `;
+            const existing = await db.query(checkQuery, [timing.office_day]);
+            if (existing.rows.length > 0) {
+                throw new Error(`Office timing for ${timing.office_day} already exists`);
+            }
+            const query = `
+      INSERT INTO bouquetbar.office_timing(
+        office_day,
+        open_time,
+        close_time,
+        is_holiday
+      )
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+            const values = [
+                timing.office_day,
+                timing.open_time,
+                timing.close_time,
+                timing.is_holiday
+            ];
+            console.log('Executing office timing insert query:', query);
+            const result = await db.query(query, values);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error in createOfficeTiming:', error);
+            throw new Error(`Failed to create office timing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async updateOfficeTiming(id, updates) {
+        try {
+            const updateFields = [];
+            const values = [];
+            let valueCount = 1;
+            if (updates.office_day !== undefined) {
+                updateFields.push(`office_day = $${valueCount}`);
+                values.push(updates.office_day);
+                valueCount++;
+            }
+            if (updates.open_time !== undefined) {
+                updateFields.push(`open_time = $${valueCount}`);
+                values.push(updates.open_time);
+                valueCount++;
+            }
+            if (updates.close_time !== undefined) {
+                updateFields.push(`close_time = $${valueCount}`);
+                values.push(updates.close_time);
+                valueCount++;
+            }
+            if (updates.is_holiday !== undefined) {
+                updateFields.push(`is_holiday = $${valueCount}`);
+                values.push(updates.is_holiday);
+                valueCount++;
+            }
+            if (updateFields.length === 0) {
+                throw new Error("No fields provided for update");
+            }
+            values.push(id);
+            const query = `
+      UPDATE bouquetbar.office_timing
+      SET ${updateFields.join(', ')}
+      WHERE id = $${valueCount}
+      RETURNING *;
+    `;
+            console.log('Executing office timing update query:', query);
+            const result = await db.query(query, values);
+            if (!result.rows[0]) {
+                throw new Error(`Office timing with id ${id} not found`);
+            }
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error in updateOfficeTiming:', error);
+            throw new Error(`Failed to update office timing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async deleteOfficeTiming(id) {
+        try {
+            const query = `
+      DELETE FROM bouquetbar.office_timing
+      WHERE id = $1
+      RETURNING id;
+    `;
+            console.log('Executing delete office timing query:', query);
+            const result = await db.query(query, [id]);
+            if (result.rowCount === 0) {
+                throw new Error('Office timing not found');
+            }
+            console.log('Office timing deleted successfully');
+        }
+        catch (error) {
+            console.error('Error in deleteOfficeTiming:', error);
+            throw new Error(`Failed to delete office timing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
     async updateOrderPaymentStatus(id, paymentStatus, transactionId) {
         const query = `
@@ -1453,20 +2085,30 @@ export class DatabaseStorage {
     }
     async setDefaultAddress(userId, addressId) {
         try {
+            console.log('=== SET DEFAULT ADDRESS ===');
+            console.log('User ID:', userId);
+            console.log('Address ID:', addressId);
             // 1️⃣ Remove default from all addresses of this user
             const unsetQuery = `
       UPDATE bouquetbar.addresses
       SET isdefault = false, updatedat = NOW()
-      WHERE userid = '${userId}' AND isdefault = true AND isactive=true
+      WHERE userid = '${userId}' AND isdefault = true AND isactive = true
     `;
+            console.log('Unsetting default query:', unsetQuery);
             await db.query(unsetQuery);
             // 2️⃣ Set the new default address
             const setQuery = `
       UPDATE bouquetbar.addresses
       SET isdefault = true, updatedat = NOW()
-      WHERE id = '${addressId}' AND userid = '${userId}' AND isactive=true;
+      WHERE id = '${addressId}' AND userid = '${userId}' AND isactive = true
     `;
-            await db.query(setQuery);
+            console.log('Setting default query:', setQuery);
+            const result = await db.query(setQuery);
+            console.log('Set default result:', result);
+            console.log('Rows affected:', result.rowCount);
+            if (result.rowCount === 0) {
+                throw new Error('Address not found or does not belong to user');
+            }
         }
         catch (error) {
             console.error("Error in setDefaultAddress:", error);
@@ -1725,22 +2367,356 @@ export class DatabaseStorage {
         const query = `
         SELECT * FROM 
       bouquetbar.courses
-      ORDER BY created_at DESC ;
+      WHERE isactive = true
+      ORDER BY created_at DESC;
   `;
         console.log('Executing query:', query);
         const result = await db.query(query);
         console.log('Query executed successfully');
         return result.rows || [];
     }
-    async getEvents() {
+    async getAllEvents() {
         const query = `
-    SELECT *
+    SELECT 
+      id,
+      title,
+      event_type,
+      event_date,
+      event_time::text as event_time,
+      duration::text as duration,
+      instructor,
+      spots_left,
+      image,
+      booking_available,
+      created_at,
+      updated_at,
+      amount
     FROM bouquetbar.events
-    ORDER BY 1 ASC;
+    WHERE isactive = true
+    ORDER BY event_date ASC;
   `;
-        console.log('Executing query:', query);
+        console.log('Executing getAllEvents query:', query);
         const result = await db.query(query);
         return result.rows || [];
+    }
+    async getEventById(id) {
+        try {
+            if (!id) {
+                throw new Error('Event ID is required');
+            }
+            const query = `
+        SELECT 
+          id,
+          title,
+          event_type,
+          event_date,
+          event_time::text as event_time,
+          duration::text as duration,
+          instructor,
+          spots_left,
+          image,
+          booking_available,
+          created_at,
+          updated_at,
+          amount
+        FROM bouquetbar.events
+        WHERE id = $1 AND isactive = true
+        LIMIT 1;
+      `;
+            console.log('Executing getEventById query:', query, 'with id:', id);
+            const result = await db.query(query, [id]);
+            return result.rows[0] || null;
+        }
+        catch (error) {
+            console.error('Error in getEventById:', error);
+            throw new Error(`Failed to fetch event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getEvent(id) {
+        try {
+            if (!id) {
+                throw new Error('Event ID is required');
+            }
+            const query = `
+        SELECT 
+          id,
+          title,
+          event_type,
+          event_date,
+          event_time::text as event_time,
+          duration::text as duration,
+          instructor,
+          spots_left,
+          image,
+          booking_available,
+          created_at,
+          updated_at,
+          amount
+        FROM bouquetbar.events
+        WHERE id = $1 AND isactive = true
+        LIMIT 1;
+      `;
+            console.log('Executing query:', query);
+            const result = await db.query(query, [id]);
+            return result.rows[0] || undefined;
+        }
+        catch (error) {
+            console.error('Error in getEvent:', error);
+            throw new Error(`Failed to get event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async createEvent(eventData) {
+        try {
+            const { title, event_type, event_date, event_time, duration, instructor, spots_left, image, booking_available, amount } = eventData;
+            const query = `
+        INSERT INTO bouquetbar.events(
+          title,
+          event_type,
+          event_date,
+          event_time,
+          duration,
+          instructor,
+          spots_left,
+          image,
+          booking_available,
+          amount,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
+        )
+        RETURNING *;
+      `;
+            const values = [
+                title,
+                event_type,
+                event_date,
+                event_time || null,
+                duration || null,
+                instructor || null,
+                spots_left || null,
+                image || null,
+                booking_available !== undefined ? booking_available : true,
+                amount || '0.00'
+            ];
+            console.log('Executing event creation query:', query);
+            console.log('Values:', values);
+            const result = await db.query(query, values);
+            console.log('Event created successfully:', result.rows[0]);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error creating event:', error);
+            throw new Error(`Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async updateEvent(id, updates) {
+        try {
+            const updateFields = [];
+            const values = [];
+            let valueCount = 1;
+            if (updates.title !== undefined) {
+                updateFields.push(`title = $${valueCount}`);
+                values.push(updates.title);
+                valueCount++;
+            }
+            if (updates.event_type !== undefined) {
+                updateFields.push(`event_type = $${valueCount}`);
+                values.push(updates.event_type);
+                valueCount++;
+            }
+            if (updates.event_date !== undefined) {
+                updateFields.push(`event_date = $${valueCount}`);
+                values.push(updates.event_date);
+                valueCount++;
+            }
+            if (updates.event_time !== undefined) {
+                updateFields.push(`event_time = $${valueCount}`);
+                values.push(updates.event_time);
+                valueCount++;
+            }
+            if (updates.duration !== undefined) {
+                updateFields.push(`duration = $${valueCount}`);
+                values.push(updates.duration);
+                valueCount++;
+            }
+            if (updates.instructor !== undefined) {
+                updateFields.push(`instructor = $${valueCount}`);
+                values.push(updates.instructor);
+                valueCount++;
+            }
+            if (updates.spots_left !== undefined) {
+                updateFields.push(`spots_left = $${valueCount}`);
+                values.push(updates.spots_left);
+                valueCount++;
+            }
+            if (updates.image !== undefined) {
+                updateFields.push(`image = $${valueCount}`);
+                values.push(updates.image);
+                valueCount++;
+            }
+            if (updates.booking_available !== undefined) {
+                updateFields.push(`booking_available = $${valueCount}`);
+                values.push(updates.booking_available);
+                valueCount++;
+            }
+            if (updates.amount !== undefined) {
+                updateFields.push(`amount = $${valueCount}`);
+                values.push(updates.amount);
+                valueCount++;
+            }
+            if (updateFields.length === 0) {
+                throw new Error("No fields provided for update");
+            }
+            // Always update the updated_at field
+            updateFields.push(`updated_at = NOW()`);
+            values.push(id);
+            const query = `
+        UPDATE bouquetbar.events
+        SET ${updateFields.join(', ')}
+        WHERE id = $${valueCount}
+        RETURNING *;
+      `;
+            console.log('Executing update event query:', query);
+            console.log('With values:', values);
+            const result = await db.query(query, values);
+            if (!result.rows[0]) {
+                throw new Error(`Event with id ${id} not found`);
+            }
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error in updateEvent:', error);
+            throw new Error(`Failed to update event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async deleteEvent(id) {
+        try {
+            if (!id) {
+                throw new Error('Event ID is required');
+            }
+            // First check if the event exists
+            const eventCheck = await db.query('SELECT id FROM bouquetbar.events WHERE id = $1', [id]);
+            if (eventCheck.rows.length === 0) {
+                throw new Error('Event not found');
+            }
+            // Check if there are any enrollments for this event
+            const enrollmentCheck = await db.query('SELECT id FROM bouquetbar.events_enrollments WHERE event_id = $1', [id]);
+            if (enrollmentCheck.rows.length > 0) {
+                throw new Error('Cannot delete event with existing enrollments. Please remove enrollments first.');
+            }
+            const query = `
+        UPDATE bouquetbar.events
+        SET isactive = false
+        WHERE id = $1
+        RETURNING id;
+      `;
+            console.log('Executing delete event query:', query);
+            const result = await db.query(query, [id]);
+            if (result.rowCount === 0) {
+                throw new Error('Event could not be deleted');
+            }
+            console.log('Event deleted successfully');
+        }
+        catch (error) {
+            console.error('Error in deleteEvent:', error);
+            throw new Error(`Failed to delete event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getsubscribe(email) {
+        try {
+            if (!email) {
+                // If no email provided, return all subscribers
+                const query = `
+          SELECT * FROM bouquetbar.subscribe
+          ORDER BY createdat DESC;
+        `;
+                console.log('Executing query:', query);
+                const result = await db.query(query);
+                return result.rows || [];
+            }
+            // Check if email is already subscribed
+            const checkQuery = `
+        SELECT * FROM bouquetbar.subscribe
+        WHERE usermailid = $1
+        LIMIT 1;
+      `;
+            console.log('Executing check query:', checkQuery);
+            const result = await db.query(checkQuery, [email]);
+            if (result.rows.length === 0) {
+                // Email not found, add new subscription
+                const insertQuery = `
+          INSERT INTO bouquetbar.subscribe (usermailid, createdat)
+          VALUES ($1, NOW())
+          RETURNING *;
+        `;
+                console.log('Executing insert query:', insertQuery);
+                const insertResult = await db.query(insertQuery, [email]);
+                return insertResult.rows || [];
+            }
+            // Email already exists, return existing record
+            return result.rows || [];
+        }
+        catch (error) {
+            console.error('Error in getsubscribe:', error);
+            throw new Error(`Failed to process subscription: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async getAllSubscriptions() {
+        try {
+            const query = `
+        SELECT usermailid, createdat 
+        FROM bouquetbar.subscribe
+        ORDER BY createdat DESC;
+      `;
+            console.log('Executing query:', query);
+            const result = await db.query(query);
+            return result.rows || [];
+        }
+        catch (error) {
+            console.error('Error in getAllSubscriptions:', error);
+            throw new Error(`Failed to get subscriptions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async addEmailSubscription(email) {
+        try {
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                throw new Error('Invalid email format');
+            }
+            // Check if email already exists
+            const checkQuery = `
+        SELECT * FROM bouquetbar.subscribe
+        WHERE usermailid = $1
+        LIMIT 1;
+      `;
+            const existingResult = await db.query(checkQuery, [email]);
+            if (existingResult.rows.length > 0) {
+                return {
+                    isNew: false,
+                    subscription: existingResult.rows[0],
+                    message: 'Email already subscribed'
+                };
+            }
+            // Add new subscription
+            const insertQuery = `
+        INSERT INTO bouquetbar.subscribe (usermailid, createdate)
+        VALUES ($1, NOW())
+        RETURNING *;
+      `;
+            const result = await db.query(insertQuery, [email]);
+            return {
+                isNew: true,
+                subscription: result.rows[0],
+                message: 'Successfully subscribed'
+            };
+        }
+        catch (error) {
+            console.error('Error in addEmailSubscription:', error);
+            throw new Error(`Failed to add email subscription: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
     async addEventEnrollment(enrollment) {
         try {
@@ -1860,6 +2836,7 @@ export class DatabaseStorage {
           image,
           category
         FROM bouquetbar.courses
+        WHERE isactive = true
         ORDER BY created_at DESC;
     `;
         const result = await db.query(query);
@@ -1906,6 +2883,114 @@ export class DatabaseStorage {
         catch (error) {
             console.error('Error adding class:', error);
             throw new Error('Failed to add class');
+        }
+    }
+    async updateClass(id, updates) {
+        try {
+            const updateFields = [];
+            const values = [];
+            let valueCount = 1;
+            if (updates.title !== undefined) {
+                updateFields.push(`title = $${valueCount}`);
+                values.push(updates.title);
+                valueCount++;
+            }
+            if (updates.description !== undefined) {
+                updateFields.push(`description = $${valueCount}`);
+                values.push(updates.description);
+                valueCount++;
+            }
+            if (updates.price !== undefined) {
+                updateFields.push(`price = $${valueCount}`);
+                values.push(updates.price);
+                valueCount++;
+            }
+            if (updates.duration !== undefined) {
+                updateFields.push(`duration = $${valueCount}`);
+                values.push(updates.duration);
+                valueCount++;
+            }
+            if (updates.sessions !== undefined) {
+                updateFields.push(`sessions = $${valueCount}`);
+                values.push(updates.sessions);
+                valueCount++;
+            }
+            if (updates.features !== undefined) {
+                updateFields.push(`features = $${valueCount}`);
+                values.push(JSON.stringify(updates.features));
+                valueCount++;
+            }
+            if (updates.nextbatch !== undefined) {
+                updateFields.push(`nextbatch = $${valueCount}`);
+                values.push(updates.nextbatch);
+                valueCount++;
+            }
+            if (updates.image !== undefined) {
+                updateFields.push(`image = $${valueCount}`);
+                values.push(updates.image);
+                valueCount++;
+            }
+            if (updates.category !== undefined) {
+                updateFields.push(`category = $${valueCount}`);
+                values.push(updates.category);
+                valueCount++;
+            }
+            if (updates.popular !== undefined) {
+                updateFields.push(`popular = $${valueCount}`);
+                values.push(updates.popular);
+                valueCount++;
+            }
+            if (updateFields.length === 0) {
+                throw new Error("No fields provided for update");
+            }
+            // Always update the updated_at field
+            updateFields.push(`updated_at = NOW()`);
+            values.push(id);
+            const query = `
+      UPDATE bouquetbar.courses
+      SET ${updateFields.join(', ')}
+      WHERE id = $${valueCount}
+      RETURNING *;
+    `;
+            console.log('Executing update class query:', query);
+            console.log('With values:', values);
+            const result = await db.query(query, values);
+            if (!result.rows[0]) {
+                throw new Error(`Class with id ${id} not found`);
+            }
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error in updateClass:', error);
+            throw new Error(`Failed to update class: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+    async deleteClass(id) {
+        try {
+            if (!id) {
+                throw new Error('Class ID is required');
+            }
+            // First check if the class exists
+            const classCheck = await db.query('SELECT id FROM bouquetbar.courses WHERE id = $1', [id]);
+            if (classCheck.rows.length === 0) {
+                throw new Error('Class not found');
+            }
+            const query = `
+      UPDATE bouquetbar.courses
+      SET isactive = false
+      WHERE id = $1
+      RETURNING id;
+    `;
+            console.log('Executing delete class query:', query);
+            const result = await db.query(query, [id]);
+            if (result.rowCount === 0) {
+                throw new Error('Class could not be deleted');
+            }
+            console.log('Class deleted successfully');
+        }
+        catch (error) {
+            console.error('Error in deleteClass:', error);
+            throw new Error(`Failed to delete class: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 }

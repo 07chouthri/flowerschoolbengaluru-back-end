@@ -335,15 +335,17 @@ export const addressValidationSchema = z.object({
 export const events = pgTable("events", {
     id: varchar("id").primaryKey().default(sql `gen_random_uuid()`),
     title: text("title").notNull(),
-    description: text("description").notNull(),
-    event_date: text("event_date").notNull(),
-    event_time: text("event_time").notNull(),
-    price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-    max_seats: integer("max_seats").notNull(),
-    available_seats: integer("available_seats").notNull(),
+    event_type: varchar("event_type", { length: 50 }).notNull(),
+    event_date: text("event_date").notNull(), // Using text to store date
+    event_time: text("event_time"), // Using text to store time
+    duration: text("duration"), // Using text to store interval
+    instructor: text("instructor"),
+    spots_left: integer("spots_left"),
     image: text("image"),
+    booking_available: boolean("booking_available").default(true),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).default("0.00"),
 });
 export const events_enrollments = pgTable("events_enrollments", {
     id: varchar("id").primaryKey().default(sql `gen_random_uuid()`),
@@ -357,4 +359,19 @@ export const events_enrollments = pgTable("events_enrollments", {
     transaction_id: text("transaction_id"),
     enrolled_at: timestamp("enrolled_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow()
+});
+// Event validation schemas
+export const insertEventSchema = createInsertSchema(events);
+export const updateEventSchema = insertEventSchema.partial();
+export const validateEventSchema = z.object({
+    title: z.string().min(1, "Event title is required"),
+    event_type: z.string().min(1, "Event type is required"),
+    event_date: z.string().min(1, "Event date is required"),
+    event_time: z.string().optional(),
+    duration: z.string().optional(),
+    instructor: z.string().optional(),
+    spots_left: z.number().int().min(0).optional(),
+    image: z.string().optional(),
+    booking_available: z.boolean().optional(),
+    amount: z.number().min(0).optional()
 });
