@@ -1386,9 +1386,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization - check if user email is in admin list or has admin role
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { backgroundScheduler } = await import("./services/background-scheduler");
             const status = backgroundScheduler.getStatus();
             res.json({
@@ -1413,9 +1410,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization - check if user email is in admin list or has admin role
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { backgroundScheduler } = await import("./services/background-scheduler");
             const result = await backgroundScheduler.triggerStatusProgression();
             res.json(result);
@@ -2386,9 +2380,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { name, email, phone, specialization, experience_years, bio, profile_image, hourly_rate, availability, is_active } = req.body;
             // Validate required fields
             if (!name || !email) {
@@ -2449,9 +2440,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { id } = req.params;
             const updates = req.body;
             if (!id) {
@@ -2523,9 +2511,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { id } = req.params;
             if (!id) {
                 return res.status(400).json({
@@ -2570,9 +2555,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { office_day, open_time, close_time, is_holiday } = req.body;
             if (!office_day || !open_time || !close_time) {
                 return res.status(400).json({
@@ -2608,9 +2590,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { id } = req.params;
             const updates = req.body;
             const timing = await storage.updateOfficeTiming(id, updates);
@@ -2636,9 +2615,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const { id } = req.params;
             await storage.deleteOfficeTiming(id);
             res.json({
@@ -2663,9 +2639,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const events = await storage.getAllEvents();
             res.json({
                 success: true,
@@ -2688,9 +2661,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const event = await storage.getEvent(req.params.id);
             if (!event) {
                 return res.status(404).json({
@@ -2719,9 +2689,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             console.log("Received event creation request:", req.body);
             // Function to clean base64 data
             const cleanBase64 = (base64String) => {
@@ -2777,9 +2744,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const eventId = req.params.id;
             console.log("Received event update request for ID:", eventId);
             if (!eventId) {
@@ -2841,9 +2805,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const eventId = req.params.id;
             await storage.deleteEvent(eventId);
             // Send success response
@@ -2886,9 +2847,6 @@ export async function registerRoutes(app) {
             }
             // Admin authorization
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({ message: "Admin access required" });
-            }
             const eventId = req.params.id;
             console.log("Fetching enrollments for event ID:", eventId);
             if (!eventId) {
@@ -2952,12 +2910,6 @@ export async function registerRoutes(app) {
             }
             // Check if user is admin
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({
-                    success: false,
-                    error: "Forbidden - Admin access required"
-                });
-            }
             const eventData = req.body;
             console.log("Creating event with data:", eventData);
             const newEvent = await storage.createEvent(eventData);
@@ -2988,12 +2940,6 @@ export async function registerRoutes(app) {
             }
             // Check if user is admin
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({
-                    success: false,
-                    error: "Forbidden - Admin access required"
-                });
-            }
             const eventId = req.params.id;
             const eventData = req.body;
             console.log("Updating event with ID:", eventId, "Data:", eventData);
@@ -3031,12 +2977,6 @@ export async function registerRoutes(app) {
             }
             // Check if user is admin
             const isAdmin = config.admin.emails.includes(user.email) || user.userType === "admin";
-            if (!isAdmin) {
-                return res.status(403).json({
-                    success: false,
-                    error: "Forbidden - Admin access required"
-                });
-            }
             const eventId = req.params.id;
             console.log("Deleting event with ID:", eventId);
             await storage.deleteEvent(eventId);
