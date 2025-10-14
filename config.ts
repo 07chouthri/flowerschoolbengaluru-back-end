@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   database: {
@@ -25,27 +26,32 @@ export const config = {
     host: process.env.HOST || "0.0.0.0",
     cors: {
       origins: (process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",") : [
+        // Local development
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:4173",
+        "http://localhost:8080",
+        "http://localhost:8081",
+        "http://localhost:5000",
+        "https://localhost:5000",
+        // Production domains - THESE WERE MISSING IN YOUR LOGS!
         "https://flowerschoolbengaluru.com",
         "https://app.flowerschoolbengaluru.com",
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "http://localhost:4173",
-        "http://localhost:8081",
-        "https://localhost:5000",
-        "https://flowerschoolbengaluru.com",
-        "https://app.flowerschoolbengaluru.com"
+        "http://flowerschoolbengaluru.com",
+        "http://app.flowerschoolbengaluru.com"
       ])
     }
   },
   admin: {
     phone: process.env.ADMIN_PHONE || "+919042358932",
-    emails: process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(",") : ["admin@bouquetbar.com", "support@bouquetbar.com", "vasuchouthri811@gmail.com"]
+    emails: process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(",") : [
+      "admin@bouquetbar.com", 
+      "support@bouquetbar.com", 
+      "vasuchouthri811@gmail.com"
+    ]
   },
   session: {
-    secret: process.env.SESSION_SECRET || "dev_secret"
+    secret: process.env.SESSION_SECRET || "dev_secret_change_in_production"
   },
   ssl: {
     useSSL: process.env.USE_SSL === "true",
