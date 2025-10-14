@@ -1,4 +1,3 @@
-
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes.js";
@@ -7,7 +6,6 @@ import { backgroundScheduler } from "./services/background-scheduler.js";
 import cors from "cors";
 import multer from "multer";
 import fileUpload from "express-fileupload";
-
 
 const app = express();
 
@@ -19,16 +17,30 @@ app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 app.use(fileUpload({ limits: { fileSize: 50 * 1024 * 1024 } })); // 50MB
 app.use(multer({ limits: { fileSize: 50 * 1024 * 1024 } }).any());
 
-// Configure CORS
+// Configure CORS - FIXED VERSION
 app.use(
   cors({
-    origin: config.server.cors.origins,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list
+      if (config.server.cors.origins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.error(`CORS blocked origin: ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposedHeaders: ["Set-Cookie"],
   })
 );
 
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 app.use(cookieParser());
 
@@ -72,10 +84,11 @@ const startServer = async (server: any, retries = 3) => {
         server.listen(
           {
             port,
-            host: "localhost",
+            host: config.server.host, // CHANGED: Use config.server.host instead of hardcoded "localhost"
           },
           () => {
-            console.log(`serving on port ${port}`);
+            console.log(`Server is running on ${config.server.host}:${port}`);
+            console.log(`CORS enabled for origins:`, config.server.cors.origins);
             resolve(undefined);
           }
         ).on('error', (err: NodeJS.ErrnoException) => {
@@ -108,14 +121,9 @@ const startServer = async (server: any, retries = 3) => {
       throw err;
     });
 
-    // Vite setup commented out for production build
-    // if (app.get("env") === "development") {
-    //   await setupVite(app, server);
-    // } else {
-    //   serveStatic(app);
-    // }
     console.log("Server starting in production mode");
     const port = await startServer(server);
+    
     // Start background scheduler for order status progression
     try {
       backgroundScheduler.start();
@@ -126,5 +134,5 @@ const startServer = async (server: any, retries = 3) => {
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
-  }
+  }
 })();
